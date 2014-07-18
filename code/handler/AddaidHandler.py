@@ -11,7 +11,7 @@ class AddaidHandler(tornado.web.RequestHandler):
 		self.write("<p>AddaidHandler</p><form action='/api/addaid' method='post'><input type='submit' value='submit'></form>")
 	def post(self):
 		#content =self.request.body
-		content = '{"username":"oo11o","eventid":"4"}'
+		content = '{"username":"test1","eventid":"4"}'
 		j = json.loads(content)
 
 		result = self.application.dbapi.addaidhelper(j['username'], j['eventid'])
