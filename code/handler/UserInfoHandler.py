@@ -19,7 +19,11 @@ class UpdateUserInfoHandler(tornado.web.RequestHandler):
 			print "username not exist"
 			return
 		result = self.application.dbapi.updateUserinfo(user['id'],j['changemessage'])
-		self.write("{'result':"+ json_encode(result)+"}")
+		if(isinstance(result,list)):
+			state = 1
+		else:
+			state =2
+		self.write("{'state':"+ str(state)+"}")
 		print("UpdateUserInfo success")
 		return
 

@@ -29,6 +29,7 @@ class app(tornado.web.Application):
 			(r"/api/checkrelatives",RelativesHandler.CheckrelativesHandler),
 			(r"/api/deleterelatives",RelativesHandler.DeleterelativesHandler),
 			(r"/api/addrelatives",RelativesHandler.AddrelativesHandler),
+			(r"/api/agreerelatives",RelativesHandler.AgreerelativesHandler),
 
 			(r"/api/history",HistoryHandler.HistoryHandler),
 
@@ -52,7 +53,11 @@ class app(tornado.web.Application):
 			(r"/api/thirdpartylogin",ThirdPartHandlers.ThirdPartyLoginHandler),
 			(r"/api/thirdpartylogout",ThirdPartHandlers.ThirdPartyLogoutHandler),
 			(r"/api/thirdpartyremove",ThirdPartHandlers.ThirdPartyRemoveAccountHandler),
-			(r"/api/thirdpartyfilluserinfo",ThirdPartHandlers.ThirdPartyFillUserInfoHandler)]
+			(r"/api/thirdpartyfilluserinfo",ThirdPartHandlers.ThirdPartyFillUserInfoHandler),
+
+			(r"/api/authstate", Authorize.AuthStateHandler),
+			(r"/api/requestemailauth", Authorize.RequestEmailAuthHandler),
+			(r"/api/authemail", Authorize.AuthEmailHandler)]
 		tornado.web.Application.__init__(self,handlers,**settings)
 		self.dbapi=dbapi.dbapi()
 		self.util=util.util()

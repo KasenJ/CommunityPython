@@ -29,9 +29,11 @@ class HelpmessageHandler(tornado.web.RequestHandler):
 			print '{"type":"help","data":'+json_encode(eventinfo)+'}'
 			info = self.application.dbapi.getUserInfobyName(jobj["username"])
 			cidlist = self.application.dbapi.getUserCidAround(info["longitude"],info["latitude"],5)
+			relativelist = self.application.dbapi.getRelativesCidbyUid(info['id'])
+			cidlist.extend(relativelist)
 			cidlist =  list(Set(cidlist))
-			cid = self.application.dbapi.getUserByUserName(jobj['username'])['cid']
-			cidlist.remove(cid)
+			if(info['cid'] in cidlist):
+				cidlist.remove(info['cid'])
 			self.application.push.pushToList(cidlist,'{"type":"help","data":'+json_encode(eventinfo)+'}')
 		
 		self.write(json_encode(result))
@@ -102,7 +104,7 @@ class FinishHandler(tornado.web.RequestHandler):
 		content =self.request.body
 		#content = '{"username":"test1","eventid":1}'
 		j = json.loads(content)
-		uid = self.application.dbapi.getUserByUserName(j['username'])["id"]
+		user = self.application.dbapi.getUserByUserName(j['username'])
 		event = self.application.dbapi.getEventByEventId(j['eventid'])
 		if(event is None):
 			self.write("{'state':1}")
@@ -110,7 +112,7 @@ class FinishHandler(tornado.web.RequestHandler):
 			return
 		rNamelist = self.application.dbapi.getAllRelativeNamebyUid(event["usrid"])
 		print rNamelist
-		if(uid not in rNamelist):
+		if(user["id"] not in rNamelist):
 			self.write("{'state':2}")
 			print "user not relative or itself,can not update sate"
 			return
@@ -129,21 +131,21 @@ class FinishHandler(tornado.web.RequestHandler):
 		writedata['helpers'] = data
 		print writedata
 		#push
-		"""pushlist = self.application.dbapi.getFollowerCidByEid(jobj['eid'])
-		helperlist = self.application.dbapi.getHelpersCidbyEid(jobj['eid'])
+		pushlist = self.application.dbapi.getFollowerCidByEid(j['eventid'])
+		helperlist = self.application.dbapi.getHelpersCidbyEid(j['eventid'])
 		pushlist.extend(helperlist)
-		relativelist = self.application.dbapi.getRelativesCidbyUid(uid)
+		relativelist = self.application.dbapi.getRelativesCidbyUid(user["id"])
 		pushlist.extend(relativelist)
 		pushlist =  list(Set(pushlist))
-		cid = self.application.dbapi.getUserByUserName(j['username'])['cid']
-		cidlist.remove(cid)
+		if(user['cid'] in pushlist):
+			pushlist.remove(user['cid'])
 		pushdata = {}
 		data = {}
 		pushdata['type'] = "endhelp"
 		data['eventid'] = j['eventid']
 		data['time'] = currenttime.strftime('%Y-%m-%d %H:%M:%S')
 		pushdata['data'] = data
-		self.application.push.pushToList(pushlist,pushdata)"""
+		self.application.push.pushToList(pushlist,json_encode(pushdata))
 		self.write(json_encode(writedata))
 		print "finsh an event"
 		return
@@ -194,19 +196,26 @@ class SendsupportHandler(tornado.web.RequestHandler):
 		content =self.request.body
 		#content='{"username":"test1","eid":4,"message":{"content":"TestssCofffntent"}}'
 		jobj=json.loads(content)
+		user = self.application.dbapi.getUserByUserName(j['username'])
 		result=self.application.dbapi.addSupportByEventIdAndUserName(jobj["eid"],jobj["username"],jobj["message"])
-		"""if(result['errorCode'] == 200):
+		if(result['errorCode'] == 200):
 			pushlist = self.application.dbapi.getFollowerCidByEid(jobj['eid'])
+			relativelist =self.application.dbapi.getRelativesCidbyUid(user['id'])
+			pushlist.extend(relativelist)
+			pushlist =  list(Set(pushlist))
+			if(user['cid'] in pushlist)
+				pushlist.remove(user['cid'])
+			pushlist.append(self.application.dbapi.getUsercidByEid(jobj['eid'])['cid'])
 			datatemp = self.application.dbapi.getSupportBySid(result['supportid'])
 			pushdata = {}
 			data = {}
 			pushdata['type'] = 'aid'
-			data['user'] = jobj['username']
+			data['username'] = jobj['username']
 			data['content'] = datatemp['content']
 			data['time'] = datatemp['time'].strftime('%Y-%m-%d %H:%M:%S')
 			data['eventid'] = jobj['eid']
 			pushdata['data'] = data
-			self.application.push.pushToList(pushlist,pushdata)"""
+			self.application.push.pushToList(pushlist,json_encode(pushdata))
 		self.write(json_encode(result))
 
 

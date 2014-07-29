@@ -11,7 +11,7 @@ class RegisterHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		content =self.request.body
-		#content = '{"username": "test1","password": "1","kind": 1, "cardid":"test" ,"realname":"1","sex":1,"age":1, "address":"1","illness":"1"}'
+		#content = '{"username": "test1","password": "1","kind": 1, "cardid":"test" ,"realname":"1","sex":1,"age":1, "address":"1","illness":"1","phone":"11"}'
 		j = json.loads(content)
 		if(self.application.dbapi.getUserByUserName(j['username']) is not None):
 			self.write("{'state':1}")
@@ -42,7 +42,7 @@ class LoginHandler(tornado.web.RequestHandler):
 		content = self.request.body
 		#content = '{"username":"12","password":"1","latitude":23.000000,"longitude":23.000000}'
 		j = json.loads(content)
-		if(j['username'].strip()=='' ):
+		if(j['username'].strip()==''):
 			self.write("{'state':1}")
 			print "username is null"
 			return
@@ -104,9 +104,9 @@ class AuthenHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		#self.write("AuthenHandler")
-		eid = 1
-		result = len(self.application.dbapi.getHelpersCidbyEid(eid))
-		print result
+		username = "test1"
+		result = self.application.dbapi.getUserInfobyName(username)
+		print result['id']
 		self.write(str(result))
 		return
 
@@ -177,8 +177,8 @@ class GetAvatarHandler(tornado.web.RequestHandler):
 		j = json.loads(content)
 		result = {}
 		if('uid' in j):
-			result['avatar'] = 	self.application.util.getAvatarbyUid(j['uid'])
+			result['avatar'] = self.application.util.getAvatarbyUid(j['uid'])
 		else:
-			result['avatar'] = 	self.application.util.getAvatarbyUid(j['username'],self.application.dbapi)
+			result['avatar'] = self.application.util.getAvatar(j['username'],self.application.dbapi)
 		self.write(json_encode(result))
 		return

@@ -6,4 +6,5 @@ __all__ = [
 					 "UserInfoHandler",
 					 "FollowHandler",
 					 "GetArroundEvent",
-					 "ThirdPartHandlers"]
+					 "ThirdPartHandlers",
+					 "Authorize"]

@@ -18,17 +18,17 @@ class AddrelativesHandler(tornado.web.RequestHandler):
 		j = json.loads(content)
 		row = self.application.dbapi.getRelationByUsername(j['u_name'], j['r_name'])
 		if row == 0:
-			#self.application.dbapi.addRelationByUsername(j['u_name'], j['r_name'])
 			self.application.dbapi.addtempRelationByUsername(j['u_name'], j['r_name'],j['kind'])
 			#push data
 			cid = self.application.dbapi.getUserByUserName(j['r_name'])['cid']
 			pushdata = {}
 			datainside = {}
 			pushdata['type'] = "invite"
-			datainside['user'] = j['u_name']
+			datainside['username'] = j['u_name']
 			datainside['info'] = j['info']
+			datainside['type'] = j['kind']
 			pushdata['data'] = datainside
-			self.application.push.pushToSingle(cid,pushdata)
+			self.application.push.pushToSingle(cid,json_encode(pushdata))
 			add_message = {'state': 1}
 			print "add relative success"
 		else:
@@ -52,6 +52,7 @@ class CheckrelativesHandler(tornado.web.RequestHandler):
 			for row in re:
 				info=self.application.dbapi.getUsermassegeByUserId(row["cid"])
 				info['kind'] = row['kind']
+				#info['avatar'] = self.application.util.getAvatarbyUid(info['id'])
 				#relatives.append('{"info":'+str(info)+',"avatar":'+self.application.util.getAvatarbyUid(info['id'])+'}')
 				relatives.append(info)
 			data={'state':1,'ralatives':relatives}
@@ -90,12 +91,23 @@ class AgreerelativesHandler(tornado.web.RequestHandler):
 		content =self.request.body
 		#content = '{"u_name":"ooo","c_name":"11oo","kind": ,"agree":1(1同意，0不同意)}'
 		j = json.loads(content)
-		if(j['agree'] == 1):#删除temprelation，添加relation,返回状态1，推送数据到uid
-			self.application.dbapi.deletetemprelation(uid,cid)
-			self.application.dbapi.addrelation(uid,cid,j['kind'])
+		user = self.application.dbapi.getUserByUserName(j['u_name'])
+		cid = self.application.dbapi.getUserByUserName(j['c_name'])['id']
+		if(j['agree'] == "1"):
+			kind = self.application.dbapi.deletetemprelation(user['id'],cid)
+			self.application.dbapi.addRelationByUid(user['id'],cid,kind)
+			print "agree 1"
+			pushdata = {}
+			pushdata['type'] = "agree"
+			data = {}
+			data['userid'] = user['id']
+			data['username'] = user['name']
+			data['type'] = kind
+			self.application.push.pushToSingle(user['cid'],json_encode(pushdata))
 			state = {'state':1}
-		else:#删除temprelaiton
-			self.application.dbapi.deletetemprelation(uid,cid)
+		else:
+			self.application.dbapi.deletetemprelation(user['id'],cid)
+			print "agree 0"
 			state = {'state':1}
 		self.write(json_encode(state))
 		return
