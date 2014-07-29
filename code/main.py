@@ -4,6 +4,7 @@ import tornado.httpserver
 import os,MySQLdb,dbapi,util
 from handler import *
 from push import *
+from xml.dom.minidom import parse,parseString
 
 #login url handler
 class IndexHandler(tornado.web.RequestHandler):
