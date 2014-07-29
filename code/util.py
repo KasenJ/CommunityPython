@@ -65,3 +65,13 @@ class util:
 		audio.write(base64.standard_b64decode(videostring))
 		audio.close()
 		print "set Audio success"
+
+	def getRankByScore(self,s):
+		for num in self.score:
+			if s<=self.score[num]['max'] and s>=self.score[num]['min']:
+				result=dict()
+				result['scoreMin']=self.score[num]['min']
+				result['scoreMax']=self.score[num]['max']
+				result['scoreLevel']=num
+				return result
+		return None
