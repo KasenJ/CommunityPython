@@ -1,4 +1,7 @@
 ﻿drop table IF EXISTS tpu;
+drop table IF EXISTS auth;
+drop table IF EXISTS email_code;
+drop table IF EXISTS auth_cnt;
 drop table IF EXISTS support;
 drop table IF EXISTS helper;
 drop table IF EXISTS follow;
@@ -33,10 +36,11 @@ CREATE TABLE user
 用户信息表(用户头像放在统一文件夹下，以id为标识符)
 id:对应用户id
 cardid:身份证号
-phone:电话
 name:用户昵称
 sex:性别	(男1，女2)
 age:年龄
+vocation:职业是(医务相关人员:1,警察、消防等政府相关人员:2,其他:3)
+phone:电话
 address:地址
 illness:病史
 credit:用户信誉度(根据参与的所有事件评分-综合得出)
@@ -51,6 +55,8 @@ CREATE TABLE info
 	name varchar(50) NOT NULL,
 	sex int,
 	age int,
+	vocation int,
+	phone varchar(25),
 	address varchar(255),
 	illness varchar(255),
 	credit int,
@@ -194,6 +200,70 @@ CREATE TABLE temprelation
 	foreign key(uid) references user(id),
 	foreign key(cid) references user(id)
 )ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+/*
+用户认证表
+id：用户标识
+email：邮箱
+email_state：邮箱认证状态
+phone：手机号
+phone_state：手机认证状态
+*/
+CREATE TABLE auth (
+	id int NOT NULL,
+	email varchar(50),
+	email_state enum("unauth", "authing", "authed") NOT NULL,
+	phone varchar(20),
+	phone_state enum("unauth", "authing", "authed") NOT NULL,
+	primary key(id),
+	foreign key(id) references user(id) ON DELETE CASCADE
+) DEFAULT CHARSET = utf8;
+
+/*
+邮箱随机码表
+id：用户标识
+email_code：随机码
+expire_in：过去时间
+*/
+CREATE TABLE email_code (
+	id int NOT NULL,
+	code varchar(50) NOT NULL,
+	expire_in int NOT NULL,
+	primary key(id),
+	foreign key(id) references user(id) ON DELETE CASCADE
+) DEFAULT CHARSET = utf8;
+
+/*
+请求验证次数表：
+id：用户标识
+kind：email/phone，请求验证的类型
+count：目前已经请求的次数
+*/
+CREATE TABLE auth_cnt (
+	id int NOT NULL,
+	kind enum("email", "phone") NOT NULL,
+	cnt int NOT NULL,
+	primary key(id, kind),
+	foreign key(id) references user(id) ON DELETE CASCADE
+) DEFAULT CHARSET = utf8;
+
+/*
+计算信誉度辅助表：
+askid:求助者id
+helperid：帮客id
+credit：信誉度(前一个事件的)
+time:发出求助的时间
+*/
+CREATE TABLE previousEvent(
+	askid int NOT NULL,
+	helperid int NOT NULL,
+	time datetime,
+	credit double,
+	primary key(askid, helperid),
+	foreign key(askid) references user(id),
+	foreign key(helperid) references user(id)
+) DEFAULT CHARSET = utf8;
+
 /*
 添加6用户（3男3女）:
 */

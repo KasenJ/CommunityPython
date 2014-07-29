@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import MySQLdb,json
+import thread,time
 
 #in init function please change the config to fit your own requirement
 #fetchone(): return type: None/dict
@@ -16,6 +17,7 @@ class dbapi:
 		self.dbname="community"
 		self.charset="utf8"
 		self.db=MySQLdb.connect(host=self.host,user=self.user,passwd=self.passwd,db=self.dbname,charset=self.charset)
+		thread.start_new_thread(self.setDailyTask, ())
 
 	def getUserByUserId(self,userid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
@@ -93,8 +95,17 @@ class dbapi:
 
 	def getUsermassegeByUserId(self,userid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select user.id,user.name,info.name as realname,info.sex,info.age,info.address,info.illness,info.credit,info.score from user ,info where user.id=%s and info.id=%s"
+		sql="select user.id,user.name,info.name as realname,info.sex,info.age,info.address,info.illness,info.credit,info.score,phone from user,info where user.id=%s and info.id=%s"
 		param=(userid,userid)
+		cursor.execute(sql,param)
+		result=cursor.fetchone()
+		cursor.close()
+		return result
+
+	def getUsercidByEid(self,eid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="select cid from user,event where event.id= %s and event.usrid=user.id"
+		param=(eid,)
 		cursor.execute(sql,param)
 		result=cursor.fetchone()
 		cursor.close()
@@ -112,7 +123,7 @@ class dbapi:
 	def getEventandUserByEventId(self,eventid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 		sql="""select user.name as username,user.id as userid,content,starttime as time,event.kind as kind,event.id as eventid, event.latitude as latitude,event.longitude as longitude  from event,user
-		 		where event.id=%s and user.id = event.usrid"""
+				where event.id=%s and user.id = event.usrid"""
 		param=(eventid,)
 		cursor.execute(sql,param)
 		result=cursor.fetchone()
@@ -242,8 +253,8 @@ class dbapi:
 
 	def getRelativesCidbyUid(self,uid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select cid from relation,user where usrid = %s and usrid = user.id"
-		param=(eid,)
+		sql="select user.cid from relation,user where usrid = %s and usrid = user.id"
+		param=(uid,)
 		cursor.execute(sql,param)
 		result = []
 		for row in cursor.fetchall():
@@ -277,25 +288,13 @@ class dbapi:
 		result=cursor.fetchone()
 		print result[0]
 
-		sql = "insert into info(id,cardid,name,sex,age,address,illness,credit,score) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["address"],content["illness"],0,0)
+		sql = "insert into info(id,cardid,name,sex,age,address,illness,credit,score,phone,vocation) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["address"],content["illness"],0,0,content["phone"],content["vocation"])
 		cursor.execute(sql,param)
 		self.db.commit()
 				
 		cursor.close()
 		return 
- 
-	#insert support mseeage in event
-	#pre condiction:user.id，event.id exist;event.state = 0
-	#after: uptate assist in event
-	def supportmessageinsert(self,content):
-		cursor = self.db.cursor()
-		sql ="update event set assist= %s where id = %s"
-		param = (content["assist"],content["eventid"])
-		cursor.execute(sql,param)
-		self.db.commit()
-		cursor.close()
-		return
 
 	def getRelationByUserId(self, u_id, r_id):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
@@ -308,6 +307,11 @@ class dbapi:
 	#update user cid by uid
 	def UpdateCidByuid(self,cid,uid):
 		cursor = self.db.cursor()
+		sql ="update user set cid = NULl where cid = %s"
+		param = (cid,)
+		cursor.execute(sql,param)
+		self.db.commit()
+
 		sql = "update user set cid = %s where id = %s"
 		param = (cid,uid)
 		cursor.execute(sql,param)
@@ -420,7 +424,7 @@ class dbapi:
 	#after: update data credit,score in info
 	def updateUserCreditScore(self,eid,uid,score):
 		cursor = self.db.cursor()
-		sql = "update info set score = (score + %s)/2,credit = (credit+5)/3 where id = %s"
+		sql = "update info set score = score + %s,credit = (credit+5)/3 where id = %s"
 		param = (score,uid)
 		try:
 			cursor.execute(sql,param)
@@ -436,19 +440,16 @@ class dbapi:
 	def updateUserinfo(self,uid,message):
 		cursor = self.db.cursor()
 		result = []
-		if("username" in message):
-			user = self.getUserByUserName(message['username'])
-			if(user is not None):
-				return  {"state":3,"desc":"username exist"}
-			sql = "update user set name = %s where id = %s"
-			param = (message["username"],uid)
+		if("realname" in message):
+			sql = "update info set name = %s where id = %s"
+			param = (message["realname"],uid)
 			try:
 				cursor.execute(sql,param)
 				self.db.commit()
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error username"}
-			result.append(str({"state":1,"desc":"update username success"}))
+			result.append({"state":1,"desc":"update username success"})
 		if("sex" in message):
 			sql = "update info set sex = %s where id = %s"
 			param = (message["sex"],uid)
@@ -458,7 +459,7 @@ class dbapi:
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error sex"}
-			result.append(str({"state":1,"desc":"update sex success"}))
+			result.append({"state":1,"desc":"update sex success"})
 		if("age" in message):
 			sql = "update info set age = %s where id = %s"
 			param = (message["age"],uid)
@@ -468,8 +469,8 @@ class dbapi:
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error age"}
-			result.append(str({"state":1,"desc":"update age success"}))
-		"""if("phone" in message):
+			result.append({"state":1,"desc":"update age success"})
+		if("phone" in message):
 			sql = "update info set phone = %s where id = %s"
 			param = (message["phone"],uid)
 			try:
@@ -478,7 +479,7 @@ class dbapi:
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error age"}
-			result.append(str({"state":1,"desc":"update age success"}))"""
+			result.append({"state":1,"desc":"update age success"})
 		if("address" in message):
 			sql = "update info set address = %s where id = %s"
 			param = (message["address"],uid)
@@ -488,7 +489,7 @@ class dbapi:
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error address"}
-			result.append(str({"state":1,"desc":"update address success"}))
+			result.append({"state":1,"desc":"update address success"})
 		if("illness" in message):
 			sql = "update info set illness = %s where id = %s"
 			param = (message["illness"],uid)
@@ -498,7 +499,7 @@ class dbapi:
 			except:
 				self.db.rollback()
 				return {"state":2,"desc":"db access error illness"}
-			result.append(str({"state":1,"desc":"update illness success"}))
+			result.append({"state":1,"desc":"update illness success"})
 		cursor.close()
 		return result
 
@@ -526,16 +527,18 @@ class dbapi:
 		self.db.commit()
 		cursor.close()
 
-	def addRelationByUsername(self, u_name, r_name,kind):
-		result = self.getUserByUserName(u_name)
-		u_id = str(result["id"])
-		result = self.getUserByUserName(r_name)
-		r_id = str(result["id"])
+	def addRelationByUid(self, u_id, r_id,kind):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="INSERT INTO relation (usrid, cid, kind) VALUES ('" + u_id + "', '" + r_id + "', '"+kind+"')"
-		cursor.execute(sql)
+		sql="INSERT INTO relation(usrid, cid, kind) VALUES(%s,%s,%s)"
+		param=(u_id,r_id,kind)
+		cursor.execute(sql,param)
+		self.db.commit()
+		sql="INSERT INTO relation(usrid, cid, kind) VALUES(%s,%s,%s)"
+		param=(r_id,u_id,kind)
+		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
+
 
 	def addtempRelationByUsername(self, u_name, r_name,kind):
 		result = self.getUserByUserName(u_name)
@@ -550,11 +553,17 @@ class dbapi:
 
 	def deletetemprelation(self,uid,cid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="delete from temprelation where uid = %s,cid =%s"
+		sql="select * from temprelation where uid = %s and cid =%s"
+		param=(uid,cid)
+		cursor.execute(sql,param)
+		result=cursor.fetchone()
+		kind = result['kind']
+		sql="delete from temprelation where uid = %s and cid =%s"
 		param=(uid,cid)
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
+		return kind
 
 	def addaidhelper(self, u_name, e_id):
 		result = self.getUserByUserName(u_name)
@@ -628,11 +637,11 @@ class dbapi:
 				cursor.execute("select last_insert_id()")
 				eid = cursor.fetchone()["last_insert_id()"]
 				if(message['videosign'] =="1" and message['audiosign'] =="1"):
-					slef.UpdateEventVideoAndAudio(eid)
+					self.UpdateEventVideoAndAudio(eid)
 				elif(message['videosign'] =="1" and message['audiosign'] =="0"):
-					slef.UpdateEventVideo(eid)
+					self.UpdateEventVideo(eid)
 				elif(message['videosign'] =="0" and message['audiosign'] =="1"):
-					slef.UpdateEventAudio(eid)
+					self.UpdateEventAudio(eid)
 				return {"state":1,"errorDesc":"","eventid":eid}
 		cursor.close()
 
@@ -711,8 +720,7 @@ class dbapi:
 			data={'state':1,'users':userlist}#return the user table successly
 		else:
 			data={'state':0}#the user not exist,return state 0
-		result=json.dumps(data)
-		return result
+		return data
 
 	#update the password by userid and userpassword
 	def UpdatePassword(self,content):
@@ -761,8 +769,8 @@ class dbapi:
 		return True
 
 	def addSupportByEventIdAndUserName(self,eid,username,message):
-		if(not self.checkHelperByEventIdAndUserName(eid,username)):
-			return {"errorCode":403,"errorDesc":"No Such Helper "+str(username)+" in event "+str(eid)}
+		#if(not self.checkHelperByEventIdAndUserName(eid,username)):
+		#	return {"errorCode":403,"errorDesc":"No Such Helper"+str(username)+" in event "+str(eid)}
 		if(not ("content" in message) ):
 			return {"errorCode":403,"errorDesc":"Messge Incomplete"}
 		else:
@@ -794,7 +802,7 @@ class dbapi:
 
 	def getSupportsByEventId(self,eid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select * from support where eid=%s"
+		sql="select * from support where eid=%s ORDER BY time DESC"
 		param=(eid,)
 		cursor.execute(sql,param)
 		result=[]
@@ -802,6 +810,128 @@ class dbapi:
 			item['time'] = item['time'].strftime('%Y-%m-%d %H:%M:%S')
 			result.append(item)
 		return result
+
+	def insertAuth(self, uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "insert into auth(id, email_state, phone_state) values(%s, 'unauth', 'unauth')"
+		param = (uid,)
+		succeed = True
+		try:
+			cursor.execute(sql, param)
+			self.db.commit()
+		except Exception as e:
+			succeed = False
+			print(e)
+		finally:
+			cursor.close()
+		return succeed
+
+	def getAuth(self, uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from auth where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		cursor.close()
+		return result
+
+	def updateAuthState(self, uid, kind, newState):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "update auth set %s_state = '%s' where id = %%s" % (kind, newState)
+		param = (uid,)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+
+	def updateAuthData(self, uid, kind, value):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "update auth set %s = %%s where id = %%s" % kind
+		param = (value, uid)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+
+	# if in limit, return True.
+	def checkAuthCnt(self, uid, kind, limits):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from auth_cnt where id = %%s and kind = \"%s\"" % kind
+		param = (uid,)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			sql = "insert into auth_cnt(id, kind, cnt) values(%%s, \"%s\", 0)" % kind
+			cursor.execute(sql, param)
+			cursor.close()
+			return True
+		sql = "select * from auth_cnt where id = %%s and kind = \"%s\" and cnt <= %s" % (kind, limits)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		cursor.close()
+		if result is None:
+			return False
+		else:
+			return True
+
+	def incAuthCnt(self, uid, kind):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "update auth_cnt set cnt = cnt + 1 where id = %%s and kind = \"%s\"" % kind
+		param = (uid,)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+
+	def addEmailCode(self, uid, code, period):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from email_code where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			sql = "insert into email_code(id, code, expire_in) values(%%s, %%s, unix_timestamp() + %s)" % period
+			param = (uid, code)
+		else:
+			sql = "update email_code set code = %%s, expire_in = unix_timestamp() + %s where id = %%s" % period
+			param = (code, uid)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+
+	def checkEmailCode(self, uid, code):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from email_code where id = %s and code = %s and expire_in > unix_timestamp()"
+		param = (uid, code)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			return False
+		else:
+			return True
+
+	def deleteEmailCode(self, uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "delete from email_code where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+
+	def setDailyTask(self):
+		while True:
+			time.sleep(24 * 3600)
+			self.clearAuthTempData()
+
+	def clearAuthTempData(self):
+		# clear auth_cnt table
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "delete from auth_cnt"
+		cursor.execute(sql)
+		self.db.commit()
+		# clear out date email code records
+		sql = "delete from email_code where expire_in < unix_timestamp()"
+		cursor.execute(sql)
+		self.db.commit()
+
+		cursor.close()
 
 	def __del__(self):
 		self.db.close()
