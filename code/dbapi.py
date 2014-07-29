@@ -933,5 +933,16 @@ class dbapi:
 
 		cursor.close()
 
+	def operateScoreById(self,uid,score_op):
+		cursor = self.db.cursor()
+		if score_op > 0:
+			sql = "update info set score = score+%s where id = %s"
+		else:
+			sql = "update info set score = score-%s where id = %s"
+		param = (score_op,uid)
+		cursor.execute(sql,param)
+		self.db.commit()
+		cursor.close()
+
 	def __del__(self):
 		self.db.close()
