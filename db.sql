@@ -1,4 +1,7 @@
 ﻿drop event IF EXISTS init_score_info;
+drop procedure IF EXISTS init_func;
+drop table IF EXISTS score_info;
+drop table IF EXISTS previousEvent;
 drop table IF EXISTS tpu;
 drop table IF EXISTS auth;
 drop table IF EXISTS email_code;
@@ -272,7 +275,7 @@ CREATE TABLE previousEvent(
 */
 CREATE TABLE score_info(
 	id int NOT NULL,
-	login_time datetime,
+	login_time datetime NOT NULL,
 	score1 int DEFAULT 0,
 	score2 int DEFAULT 0,
 	score3 int DEFAULT 0,
@@ -285,20 +288,24 @@ CREATE TABLE score_info(
 	score10 int DEFAULT 0,
 	score11 int DEFAULT 0,
 	primary key(id),
-	foreign key(id) references user(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	foreign key(id) references user(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) DEFAULT CHARSET = utf8;
 
 /*
 更新积分详情表事件
 */
+delimiter //
 CREATE
-	PROCEDURE init_func () 
+	PROCEDURE init_func() 
 	BEGIN
-		UPDATE score_info SET login_time=TIMESTAMP('2000-01-01 00:00:00');
-	END;
+		UPDATE score_info SET login_time=TIMESTAMP('2000-01-01 00:00:00'), score1=0, score2=0, score3=0, score4=0, score5=0, score6=0, score7=0, score8=0, score9=0, score10=0, score11=0;
+	END//
+
+delimiter ;
+
 CREATE 
 	EVENT IF NOT EXISTS init_score_info
-	ON SCHEDULE EVERY 1 DAY STARTS TIMESTAMP(CURRENT_DATE,'00:00:00')
+	ON SCHEDULE EVERY 1 DAY STARTS TIMESTAMP(CONCAT(CURRENT_DATE,'00:00:00'))
 	ON COMPLETION PRESERVE
 	DO CALL init_func();
 /*

@@ -944,5 +944,52 @@ class dbapi:
 		self.db.commit()
 		cursor.close()
 
+	def addScoreInfoById(self,uid):
+		cursor = self.db.cursor()
+		sql = "insert into score_info(id,login_time) values(%s,%s)"
+		param = (uid,"2000-01-01 00:00:00")
+		cursor.execute(sql,param)
+		self.db.commit()
+		cursor.close()
+
+	def operateScoreInfoById(self,uid,cond,score_op):
+		cursor = self.db.cursor()
+		if score_op > 0:
+			sql = "update score_info set score"+str(cond)+" = score"+str(cond)+"+%s where id = %s" 
+		else:
+			sql = "update score_info set score"+str(cond)+" = score"+str(cond)+"-%s where id = %s" 
+		param = (abs(score_op),uid)
+		cursor.execute(sql,param)
+		self.db.commit()
+		cursor.close()
+
+	def getScoreInfoById(self,uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from score_op where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			return None
+		else:
+			return result
+
+	def setScoreTimeById(self,uid,curTime):
+		cursor = self.db.cursor()
+		sql = "update score_info set login_time = %s where id = %s" 
+		param = (curTime,uid)
+		cursor.execute(sql,param)
+		self.db.commit()
+		cursor.close()
+
+	def getGreatestHelperId(self,eid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select usrid from helper where eid = %s and credit = max(select max(credit) from helper where eid = %s)"
+		param = (eid,eid)
+		cursor.execute(sql, param)
+		result = cursor.fetchall()
+		return result
+
+
 	def __del__(self):
 		self.db.close()

@@ -1,7 +1,7 @@
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
-import os,MySQLdb,dbapi,util
+import os,MySQLdb,dbapi,util,score
 from handler import *
 from push import *
 from xml.dom.minidom import parse,parseString
@@ -63,6 +63,7 @@ class app(tornado.web.Application):
 		self.dbapi=dbapi.dbapi()
 		self.util=util.util()
 		self.push = Push()
+		self.score=score.score()
 		
 
 if __name__=="__main__":

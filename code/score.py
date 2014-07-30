@@ -1,22 +1,36 @@
-import xml.etree.ElementTree as ET
+import os,xml.etree.ElementTree as ET
+from time import *
 class score:
 	def __init__(self):
-		self.config=dict()
 		_config=ET.parse(os.path.abspath("./static/config.xml"))
 		root=_config.getroot()
 		levels=root.findall("./score/level")
+		ops=root.findall("./ops/op")
+
+		self.config=dict()
 		for level in levels:
 			num=int(level[0].text)
 			minScore=int(level[1].text)
-			maxScore=int(level[2].text)
+			maxScore="INF" if level[2].text=="INF" else int(level[2].text)
+
 
 			self.config[num]=dict()
 			self.config[num]['min']=minScore
 			self.config[num]['max']=maxScore
 
+		self.ops=dict()
+		for op in ops:
+			cond=int(op[0].text)
+			score_op=int(op[1].text)
+			score_max="INF" if op[2].text=="INF" else int(op[2].text)
+
+			self.ops[cond]=dict()
+			self.ops[cond]['op']=score_op
+			self.ops[cond]['max']=score_max
+
 	def getRankByScore(self,s):
 		for num in self.config:
-			if s<=self.config[num]['max'] and s>=self.config[num]['min']:
+			if (self.config[num]['max']=="INF" or s<=self.config[num]['max']) and s>=self.config[num]['min']:
 				result=dict()
 				result['scoreMin']=self.config[num]['min']
 				result['scoreMax']=self.config[num]['max']
@@ -40,46 +54,61 @@ class score:
 	# 11:caller give no credit to the helper after the event end for five days -10/infinity
 
 	def updateScoreByCase(self,uid,cond,dbapi):
-		def func1(u,d):
-			d.operateScoreById(u,5)
-			print "func1"
-		def func2(u,d):
-			d.operateScoreById(u,1)
-			print "func2"
-		def func3(u,d):
-			d.operateScoreById(u,2)
-			print "func3"
-		def func4(u,d):
-			d.operateScoreById(u,3)
-			print "func4"
-		def func5(u,d):
-			d.operateScoreById(u,1)
-			print "func5"
-		def func6(u,d):
-			d.operateScoreById(u,2)
-			print "func6"
-		def func7(u,d):
-			d.operateScoreById(u,5)
-			print "func7"
-		def func8(u,d):
-			d.operateScoreById(u,-10)
-			print "func8"
-		def func9(u,d):
-			d.operateScoreById(u,-20)
-			print "func9"
-		def func10(u,d):
-			d.operateScoreById(u,-1)
-			print "func10"
-		def func11(u,d):
-			d.operateScoreById(u,-10)
-			print "func11"
-
-		if cond>=1 and cond<=11:
-			funcName="func"+str(cond)
-			(eval(funcName))(uid,dbapi)
+		if cond in self.ops:
+			info = dbapi.getScoreInfoById(uid)
+			score_op = self.ops[cond]["op"]
+			if info is not None:
+				name = "score"+str(cond)
+				if self.ops[cond]["max"]=="INF":
+					dbapi.operateScoreById(uid,score_op)
+					dbapi.operateScoreInfoById(uid,cond,score_op)
+				elif abs(info[name]+self.ops[cond]["op"]) <= abs(self.ops[cond]["max"]):
+					dbapi.operateScoreById(uid,self.ops[cond]["op"])
+					dbapi.operateScoreInfoById(uid,cond,score_op)
+				else:
+					return False
+			return True
 		else:
-			print "arguments incorrect"
+			return False
+
+	def userRegister(self,uid,dbapi):
+		return self.updateScoreByCase(uid,1,dbapi)
+
+	def userLogin(self,uid,dbapi):
+		info = dbapi.getScoreInfoById(uid)
+		if info is not None:
+			if info['login_time'].strftime("%Y-%m-%d %H:%M:%S") == "2000-01-01 00:00:00":
+				dbpai.setScoreTimeById(uid,time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())))
+				return self.updateScoreByCase(uid,2,dbapi)
+			else:
+				return False
+		else:
+			return False
+
+	def giveCredit(self,uid,eid,dbapi):
+		self.updateScoreByCase(uid,3,dbapi)
+
+		#condition 7
+		helpers = dbapi.getGreatestHelperId(eid)
+		for helper in helpers:
+			self.updateScoreByCase(helper['usrid'],7,dbapi)
+
+
+	def joinSupport(self,uid,dbapi):
+		return self.updateScoreByCase(uid,4,dbapi)
+
+	def sendSupport(self,uid,dbapi):
+		return self.updateScoreByCase(uid,5,dbapi)
+
+	def checkOnlineHours(self,uid,dbapi):
+		info = dbapi.getScoreInfoById(uid)
+		if info is not None:
+			if (time.localtime(time.time()) - info['login_time']).hours() >= 12:
+				return return self.updateScoreByCase(uid,6,dbapi)
+
+	def quitSupport(self,uid,dbapi):
+		return self.updateScoreByCase(uid,10,dbapi)
 
 if __name__ == '__main__':
-	test=util()
+	test=score()
 	print test.getRankByScore(700)
