@@ -160,9 +160,13 @@ class GivecreditHandler(tornado.web.RequestHandler):
 		#content='{"eventid":1,"credits":[{"username":"test2","cridit":5},{"username":"test6","cridit":1}]}'
 		jobj=json.loads(content)
 		result=[]
+		event = self.application.dbapi.getEventByEventId(j['eventid'])
+		askuser = self.application.dbapi.getUserInfobyUid(event['usrid'])
 		for issue in jobj["credits"]:
-			temp=self.application.dbapi.setCreditByEventIdAndUserName(jobj["eventid"],issue["username"],issue["cridit"])
-			result.append({"helpername":issue["username"],"result":temp});
+			temp = self.application.dbapi.setCreditByEventIdAndUserName(jobj["eventid"],issue["username"],issue["cridit"])
+			result.append({"helpername":issue["username"],"result":temp})
+			helper = self.application.dbapi.getUserInfobyName(issue['username'])
+			self.application.util.set(event,askuser,helper,issue["cridit"],self.application.dbapi)
 		self.write(str(result))
 
 class QuitaidHandler(tornado.web.RequestHandler):
@@ -228,30 +232,6 @@ class SupportmessageHandler(tornado.web.RequestHandler):
 	def post(self):
 		content =self.request.body
 		content = '{"eventid": 3,"video": "ssssssssssssssss","audio":"ddddd"}'
-		"""#content = '{"username": "ooo","eventid": 3,"video": "ssssssssssssssss","audio":""}'
-		j = json.loads(content)
-		us = self.application.dbapi.getUserByUserName(j['username'])
-		if(us is None):
-			self.write("{'state':1}")
-			print "username not exist"
-			return
-		print us["id"]
-		
-		event = self.application.dbapi.getEventByEventId(j['eventid'])
-		if(event is None):
-			self.write("{'state':2}")
-			print "event not exist"
-			return
-		if (event['state']==1):
-			self.write("{'state':3}")
-			print "event is end"
-			return
-		if(us["id"]==event["usrid"]):
-			self.application.dbapi.supportmessageinsert(j)
-			self.write("{'state':4}")
-			print "insert success"
-			return
-		return"""
 		j = json.loads(content)
 		if('video' in j):
 			self.application.util.setVideobyEid(j['eid'],j['video'])
