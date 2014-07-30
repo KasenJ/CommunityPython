@@ -1,4 +1,5 @@
-﻿drop table IF EXISTS tpu;
+﻿drop event IF EXISTS init_score_info;
+drop table IF EXISTS tpu;
 drop table IF EXISTS auth;
 drop table IF EXISTS email_code;
 drop table IF EXISTS auth_cnt;
@@ -11,6 +12,7 @@ drop table IF EXISTS relation;
 drop table IF EXISTS info;
 drop table IF EXISTS user;
 
+SET GLOBAL event_scheduler = 1;
 /*
 用户表
 id:自增id
@@ -264,6 +266,41 @@ CREATE TABLE previousEvent(
 	foreign key(helperid) references user(id)
 ) DEFAULT CHARSET = utf8;
 
+/*
+本日获得积分详情表：
+每天将重置此表为默认值
+*/
+CREATE TABLE score_info(
+	id int NOT NULL,
+	login_time datetime,
+	score1 int DEFAULT 0,
+	score2 int DEFAULT 0,
+	score3 int DEFAULT 0,
+	score4 int DEFAULT 0,
+	score5 int DEFAULT 0,
+	score6 int DEFAULT 0,
+	score7 int DEFAULT 0,
+	score8 int DEFAULT 0,
+	score9 int DEFAULT 0,
+	score10 int DEFAULT 0,
+	score11 int DEFAULT 0,
+	primary key(id),
+	foreign key(id) references user(id) ON DELETE CASCADE ON UPDATE CASCADE,
+) DEFAULT CHARSET = utf8;
+
+/*
+更新积分详情表事件
+*/
+CREATE
+	PROCEDURE init_func () 
+	BEGIN
+		UPDATE score_info SET login_time=TIMESTAMP('2000-01-01 00:00:00');
+	END;
+CREATE 
+	EVENT IF NOT EXISTS init_score_info
+	ON SCHEDULE EVERY 1 DAY STARTS TIMESTAMP(CURRENT_DATE,'00:00:00')
+	ON COMPLETION PRESERVE
+	DO CALL init_func();
 /*
 添加6用户（3男3女）:
 */

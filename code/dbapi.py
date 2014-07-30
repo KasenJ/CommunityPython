@@ -70,7 +70,7 @@ class dbapi:
 	def getUserAllinfobyName(self,name):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 		uid = self.getUserByUserName(name)['id']
-		return self.getUsermassegeByUserId(uid)
+		return self.getUsermessegeByUserId(uid)
 
 	#get user all info in user+info
 	#pre con: user exist
@@ -93,7 +93,7 @@ class dbapi:
 		cursor.close()
 		return result
 
-	def getUsermassegeByUserId(self,userid):
+	def getUsermessegeByUserId(self,userid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 		sql="select user.id,user.name,info.name as realname,info.sex,info.age,info.address,info.illness,info.credit,info.score,phone from user,info where user.id=%s and info.id=%s"
 		param=(userid,userid)
@@ -294,7 +294,7 @@ class dbapi:
 		self.db.commit()
 				
 		cursor.close()
-		return 
+		return result[0]
 
 	def getRelationByUserId(self, u_id, r_id):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
@@ -939,7 +939,7 @@ class dbapi:
 			sql = "update info set score = score+%s where id = %s"
 		else:
 			sql = "update info set score = score-%s where id = %s"
-		param = (score_op,uid)
+		param = (abs(score_op),uid)
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
