@@ -1,5 +1,6 @@
 ﻿drop table IF EXISTS tpu;
 drop table IF EXISTS auth;
+drop table IF EXISTS previousEvent;
 drop table IF EXISTS email_code;
 drop table IF EXISTS auth_cnt;
 drop table IF EXISTS support;
@@ -59,7 +60,7 @@ CREATE TABLE info
 	phone varchar(25),
 	address varchar(255),
 	illness varchar(255),
-	credit int,
+	credit double,
 	score int,
 	latitude DECIMAL(12,7),
 	longitude DECIMAL(12,7),

@@ -18,6 +18,8 @@ class UpdateUserInfoHandler(tornado.web.RequestHandler):
 			self.write("{'state':1}")
 			print "username not exist"
 			return
+		if('avatar' in j['changemessage']):
+			self.application.util.setAvatar(j['username'],j['changemessage']['avatar'],self.application.dbapi)
 		result = self.application.dbapi.updateUserinfo(user['id'],j['changemessage'])
 		if(isinstance(result,list)):
 			state = 1
