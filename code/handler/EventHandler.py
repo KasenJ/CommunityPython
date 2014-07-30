@@ -203,9 +203,11 @@ class SendsupportHandler(tornado.web.RequestHandler):
 			relativelist =self.application.dbapi.getRelativesCidbyUid(user['id'])
 			pushlist.extend(relativelist)
 			pushlist =  list(Set(pushlist))
-			if(user['cid'] in pushlist)
+			if(user['cid'] in pushlist):
 				pushlist.remove(user['cid'])
-			pushlist.append(self.application.dbapi.getUsercidByEid(jobj['eid'])['cid'])
+			eventuser = self.application.dbapi.getUserByEid(jobj['eid'])
+			if(eventuser['uid'] !=user['id']):
+				pushlist.append(eventuser['cid'])
 			datatemp = self.application.dbapi.getSupportBySid(result['supportid'])
 			pushdata = {}
 			data = {}
@@ -218,7 +220,7 @@ class SendsupportHandler(tornado.web.RequestHandler):
 			self.application.push.pushToList(pushlist,json_encode(pushdata))
 		self.write(json_encode(result))
 
-
+ 
 class SupportmessageHandler(tornado.web.RequestHandler):
 	def get(self):
 		self.write("<p>SupportmessageHandler</p><form action='/api/supportmessage' method='post'><input type='submit' value='submit'></form>")

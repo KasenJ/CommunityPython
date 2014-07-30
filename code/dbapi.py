@@ -102,9 +102,9 @@ class dbapi:
 		cursor.close()
 		return result
 
-	def getUsercidByEid(self,eid):
+	def getUserByEid(self,eid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select cid from user,event where event.id= %s and event.usrid=user.id"
+		sql="select cid,user.id as uid from user,event where event.id= %s and event.usrid=user.id"
 		param=(eid,)
 		cursor.execute(sql,param)
 		result=cursor.fetchone()
