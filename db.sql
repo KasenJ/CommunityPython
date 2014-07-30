@@ -17,7 +17,7 @@ drop table IF EXISTS user;
 用户表
 id:自增id
 name:登录用户名
-kind:用户类型(普通用户，认证用户，第三方机构等)
+kind:用户类型(普通用户1，志愿者2，小区保安3，安全机构4，医疗机构5，其它机构6等)
 password:用户密码(md5加密)
 cid:推送令牌
 state：在线状态0-不在线，1-表示在线

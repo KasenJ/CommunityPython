@@ -10,8 +10,8 @@ import thread,time
 class dbapi:
 	def __init__(self):
 		self.host="localhost"
-		self.user="comhelp"
-		self.passwd="20140629"
+		#self.user="comhelp"
+		#self.passwd="20140629"
 		self.user="root"
 		self.passwd="root"
 		self.dbname="community"
@@ -52,6 +52,18 @@ class dbapi:
 		param =(state,uid)
 		cursor.execute(sql,param)
 		self.db.commit()
+		cursor.close()
+		return
+
+	def updateUserCredit(self,uid,credit):
+		cursor = self.db.cursor()
+		sql = "update info set credit = %s where id = %s"
+		param = (credit,uid)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
 		cursor.close()
 		return
 
@@ -819,6 +831,44 @@ class dbapi:
 			item['time'] = item['time'].strftime('%Y-%m-%d %H:%M:%S')
 			result.append(item)
 		return result
+
+	#get record from previousEvent
+	#after:return None or dict
+	def getpreviousEvent(self,askid,helperid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="select * from previousEvent where askid=%s  and helperid = %s"
+		param=(askid,helperid)
+		cursor.execute(sql,param)
+		result = cursor.fetchone()
+		return result
+		
+	#insert new record into previousEvent
+	#after:the table insert a new record
+	def insertpreviousEvent(self,askid,helperid,credit,eventstarttime):
+		cursor = self.db.cursor()
+		sql = "insert into previousEvent(askid,helperid,time,credit) values(%s,%s,%s,%s)"
+		param = (askid,helperid,eventstarttime,credit)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
+		cursor.close()
+		return
+
+	#update the record in previousEvent
+	#after:update the record of (askid,helpid)
+	def updatepreviousEvent(self,askid,helperid,credit,eventstarttime):
+		cursor = self.db.cursor()
+		sql = "update previousEvent set credit = %s, time = %s where askid = %s and helperid = %s"
+		param = (credit,eventstarttime,askid,helperid)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
+		cursor.close()
+		return
 
 	def insertAuth(self, uid):
 		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)

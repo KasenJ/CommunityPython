@@ -104,10 +104,9 @@ class AuthenHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		#self.write("AuthenHandler")
-		username = "test1"
-		result = self.application.dbapi.getUserInfobyName(username)
-		print result['id']
-		self.write(str(result))
+		print "start"
+		print self.application.dbapi.getpreviousEvent(1,3)
+		print "lall"
 		return
 
 

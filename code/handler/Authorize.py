@@ -46,7 +46,9 @@ class AuthStateHandler(tornado.web.RequestHandler):
             self.application.dbapi.insertAuth(uid)
             auth_record = self.application.dbapi.getAuth(uid)
         result = {
+            "email": auth_record["email"],
             "email_state": auth_record["email_state"],
+            "phone": auth_record["phone"],
             "phone_state": auth_record["phone_state"]
         }
         print("mark 1")
