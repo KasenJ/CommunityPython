@@ -12,8 +12,8 @@ class dbapi:
 		self.host="localhost"
 		self.user="comhelp"
 		self.passwd="20140629"
-		#self.user="root"
-		#self.passwd="root"
+		self.user="root"
+		self.passwd="root"
 		self.dbname="community"
 		self.charset="utf8"
 		self.db=MySQLdb.connect(host=self.host,user=self.user,passwd=self.passwd,db=self.dbname,charset=self.charset)
@@ -79,6 +79,15 @@ class dbapi:
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 		sql = "select * from user,info where user.name = %s and user.id = info.id"
 		param = (name,)
+		cursor.execute(sql,param)
+		result=cursor.fetchone()
+		cursor.close()
+		return result
+
+	def getUserInfobyUid(self,uid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from user,info where user.id = %s and user.id = info.id"
+		param = (uid,)
 		cursor.execute(sql,param)
 		result=cursor.fetchone()
 		cursor.close()
@@ -422,7 +431,7 @@ class dbapi:
 	#updateuser credit score in info,use for givecredit
 	#pre cond:eid,uid exist,score >=0
 	#after: update data credit,score in info
-	def updateUserCreditScore(self,eid,uid,score):
+	"""def updateUserCreditScore(self,eid,uid,score):
 		cursor = self.db.cursor()
 		sql = "update info set score = score + %s,credit = (credit+5)/3 where id = %s"
 		param = (score,uid)
@@ -432,7 +441,7 @@ class dbapi:
 		except:
 			self.db.rollback()
 		cursor.close()
-		return
+		return"""
 
 	#update user info by username,sex,age,phone,address,illness
 	#pre cond:uid exist
@@ -796,7 +805,7 @@ class dbapi:
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
-		self.updateUserCreditScore(eid,usrid["id"],credit)
+		#self.updateUserCreditScore(eid,usrid["id"],credit)
 		return {"errorCode":200,"errorDesc":""}
 	#07/10
 
@@ -930,7 +939,42 @@ class dbapi:
 		sql = "delete from email_code where expire_in < unix_timestamp()"
 		cursor.execute(sql)
 		self.db.commit()
+		cursor.close()
 
+	def addPhoneCode(self, uid, code, period):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from phone_code where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			sql = "insert into phone_code(id, code, expire_in) values(%%s, %%s, unix_timestamp() + %s)" % period
+			param = (uid, code)
+		else:
+			sql = "update phone_code set code = %%s, expire_in = unix_timestamp() + %s where id = %%s" % period
+			param = (code, uid)
+		cursor.execute(sql, param)
+		self.db.commit()
+		cursor.close()
+		pass
+
+	def checkPhoneCode(self, uid, code):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "select * from phone_code where id = %s and code = %s and expire_in > unix_timestamp()"
+		param = (uid, code)
+		cursor.execute(sql, param)
+		result = cursor.fetchone()
+		if result is None:
+			return False
+		else:
+			return True
+
+	def deletePhoneCode(self, uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = "delete from phone_code where id = %s"
+		param = (uid,)
+		cursor.execute(sql, param)
+		self.db.commit()
 		cursor.close()
 
 	def __del__(self):

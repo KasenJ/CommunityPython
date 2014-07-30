@@ -6,7 +6,7 @@ import json
 import random
 import smtplib
 from email.mime.text import MIMEText
-
+from CHRequestHandler import CHRequestHandler, LackParamsException, NoUserException
 #
 # errorcode:
 #   1: 缺少参数
@@ -83,7 +83,7 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
             <p>您已经成功发出了邮箱验证请求。</p>
             <p>点击以下链接即可完成邮箱验证。如果无法点击，请手动复制网址到浏览器打开。</p>
             <p><a href='http://%s/api/authemail?username=%s&code=%s'>http://%s/api/authemail?username=%s&code=%s</a></p>
-            <p>请注意，本次验证的有效期为3天。在发送邮件之后的3天内任何时间都可以点击验证。</p>
+            <p>请注意，本次验证的有效期为2天。在发送邮件之后的3天内任何时间都可以点击验证。</p>
             <p>如果超过三天还没有点击该链接，则验证将过期。您需要重新请求邮箱验证。</p>
             <p>每个用户每天可以请求10次邮箱验证。如果超过10次，请第二天再试。</p>
         </body>
@@ -111,7 +111,7 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
             error = {
                 "error": "no such user",
                 "request": "requestemailauth",
-                "error_code": 1
+                "error_code": 2
             }
             self.write(json.dumps(error))
             print("no such user")
@@ -120,7 +120,9 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
         # get auth record
         auth_record = self.application.dbapi.getAuth(uid)
         if auth_record is None:
+            print "mark 2.1"
             self.application.dbapi.insertAuth(uid)
+            print "mark 2.2"
             auth_record = self.application.dbapi.getAuth(uid)
         # if authed, return error
         if auth_record["email_state"] == "authed":
@@ -154,6 +156,8 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
             }
             self.write(json.dumps(error))
             return
+        # update auth count
+        self.application.dbapi.incAuthCnt(uid, "email")
         # send email
         code = self.getCode(50)
         if not self.sendAuthEmail(email, username, code):
@@ -169,8 +173,6 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
         self.application.dbapi.addEmailCode(uid, code, period)
         # update auth state
         self.application.dbapi.updateAuthState(uid, "email", "authing");
-        # update auth count
-        self.application.dbapi.incAuthCnt(uid, "email")
         result = {
             "result": "OK"
         }
@@ -247,4 +249,95 @@ class AuthEmailHandler(tornado.web.RequestHandler):
                 "error_code": 20001
             }
             self.write(json.dumps(error))
+            return
+
+# 30001 已认证
+# 30002 超过验证次数
+# 30003 发送短信错误
+class RequestPhoneAuthHandler(CHRequestHandler):
+    codechars = "0123456789"
+
+    def post(self):
+        try:
+            j = self.getParams(["username", "phone"])
+            uid = self.getUserId(j["username"])
+            phone = j["phone"]
+        except LackParamsException:
+            self.writeError(1, "requestphoneauth")
+            return
+        except NoUserException:
+            self.writeError(2, "requestphoneauth")
+            return
+        auth_record = self.application.dbapi.getAuth(uid)
+        if auth_record is None:
+            self.application.dbapi.insertAuth(uid)
+            auth_record = self.application.dbapi.getAuth(uid)
+        if auth_record["phone_state"] == "authed":
+            self.writeError(30001, "requestphoneauth")
+            return
+        if not self.application.dbapi.checkAuthCnt(uid, "phone", 10):
+            self.writeError(30002, "requestphoneauth")
+            return
+        self.application.dbapi.incAuthCnt(uid, "phone")
+        code = self.getCode(6)
+        minutes = 10
+        if not self.sendSMS(phone, code, minutes):
+            self.writeError(30003, "requestphoneauth")
+        period = minutes * 60
+        self.application.dbapi.addPhoneCode(uid, code, period)
+        self.application.dbapi.updateAuthState(uid, "phone", "authing")
+        self.writeOK()
+
+
+    def getCode(self, num):
+        code = ""
+        for i in range(0, num):
+            code += random.choice(RequestPhoneAuthHandler.codechars)
+        return code
+
+    def sendSMS(self, phone, code, minutes):
+        datas = [code, minutes]
+        return sendTemplateSMS(phone, datas, 1)
+
+from CCPRestSDK import *
+
+accountSid = "aaf98f89476703de01477c05267506ef"
+accountToken = "6b34f62bcc964167a6997286bb9a3f2f"
+appId = "aaf98f89476703de01477fc1dda307b1"
+serverIP = "sandboxapp.cloopen.com"
+serverPort = "8883"
+softVersion = "2013-12-26"
+
+def sendTemplateSMS(to, datas, temId):
+    rest = REST(serverIP, serverPort, softVersion)
+    rest.setAccount(accountSid, accountToken)
+    rest.setAppId(appId)
+    result = rest.sendTemplateSMS(to, datas, temId)
+    if result["statusCode"] == "000000":
+        return True
+    else:
+        return False
+
+
+# 40001 验证失败
+class AuthPhoneHandler(CHRequestHandler):
+
+    def post(self):
+        try:
+            j = self.getParams(["username", "code"])
+            uid = self.getUserId(j["username"])
+            code = j["code"]
+        except LackParamsException:
+            self.writeError(1, "authphone")
+            return
+        except NoUserException:
+            self.writeError(2, "authphone")
+            return
+        if self.application.dbapi.checkPhoneCode(uid, code):
+            self.application.dbapi.updateAuthState(uid, "phone", "authed")
+            self.application.dbapi.deletePhoneCode(uid)
+            self.writeOK()
+            return
+        else:
+            self.writeError(40001, "authphone")
             return

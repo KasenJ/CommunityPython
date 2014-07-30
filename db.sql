@@ -2,6 +2,7 @@
 drop table IF EXISTS auth;
 drop table IF EXISTS previousEvent;
 drop table IF EXISTS email_code;
+drop table IF EXISTS phone_code;
 drop table IF EXISTS auth_cnt;
 drop table IF EXISTS support;
 drop table IF EXISTS helper;
@@ -223,8 +224,8 @@ CREATE TABLE auth (
 /*
 邮箱随机码表
 id：用户标识
-email_code：随机码
-expire_in：过去时间
+code：随机码
+expire_in：过期时间
 */
 CREATE TABLE email_code (
 	id int NOT NULL,
@@ -245,6 +246,20 @@ CREATE TABLE auth_cnt (
 	kind enum("email", "phone") NOT NULL,
 	cnt int NOT NULL,
 	primary key(id, kind),
+	foreign key(id) references user(id) ON DELETE CASCADE
+) DEFAULT CHARSET = utf8;
+
+/*
+手机验证码表
+id：用户标识
+code：验证码
+expire_in：过期时间
+*/
+CREATE TABLE phone_code (
+	id int NOT NULL,
+	code varchar(6) NOT NULL,
+	expire_in int NOT NULL,
+	primary key(id),
 	foreign key(id) references user(id) ON DELETE CASCADE
 ) DEFAULT CHARSET = utf8;
 

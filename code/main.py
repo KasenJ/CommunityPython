@@ -58,7 +58,9 @@ class app(tornado.web.Application):
 
 			(r"/api/authstate", Authorize.AuthStateHandler),
 			(r"/api/requestemailauth", Authorize.RequestEmailAuthHandler),
-			(r"/api/authemail", Authorize.AuthEmailHandler)]
+			(r"/api/authemail", Authorize.AuthEmailHandler),
+			(r"/api/requestphoneauth", Authorize.RequestPhoneAuthHandler),
+			(r"/api/authphone", Authorize.AuthPhoneHandler)]
 		tornado.web.Application.__init__(self,handlers,**settings)
 		self.dbapi=dbapi.dbapi()
 		self.util=util.util()
