@@ -174,7 +174,7 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
         period = 2 * 24 * 3600
         self.application.dbapi.addEmailCode(uid, code, period)
         # update auth state
-        self.application.dbapi.updateAuthState(uid, "email", "authing");
+        self.application.dbapi.updateAuthState(uid, "email", "authing")
         result = {
             "result": "OK"
         }
@@ -287,6 +287,7 @@ class RequestPhoneAuthHandler(CHRequestHandler):
             self.writeError(30003, "requestphoneauth")
         period = minutes * 60
         self.application.dbapi.addPhoneCode(uid, code, period)
+        self.application.dbapi.updateAuthData(uid, "phone", phone)
         self.application.dbapi.updateAuthState(uid, "phone", "authing")
         self.writeOK()
 
