@@ -1,22 +1,7 @@
 import json,os,base64
-import xml.etree.ElementTree as ET
 import datetime
+
 class util:
-	def __init__(self):
-		self.score=dict()
-		config=ET.parse(os.path.abspath("./static/config.xml"))
-		root=config.getroot()
-		levels=root.findall("./score/level")
-		for level in levels:
-			num=int(level[0].text)
-			minScore=int(level[1].text)
-			maxScore=int(level[2].text)
-
-			self.score[num]=dict()
-			self.score[num]['min']=minScore
-			self.score[num]['max']=maxScore
-
-
 	def setAvatar(self,username,filestring,dbapi):
 		print "Start set Avatar"
 		userid=dbapi.getUserByUserName(username)['id']
