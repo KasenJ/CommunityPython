@@ -105,12 +105,12 @@ class FinishHandler(tornado.web.RequestHandler):
 		#content = '{"username":"test1","eventid":1}'
 		j = json.loads(content)
 		user = self.application.dbapi.getUserByUserName(j['username'])
-		event = self.application.dbapi.getEventByEventId(j['eventid'])
+		event = self.application.dbapi.getEventandUserByEventId(j['eventid'])
 		if(event is None):
 			self.write("{'state':1}")
 			print "event not exist"
 			return
-		rNamelist = self.application.dbapi.getAllRelativeNamebyUid(event["usrid"])
+		rNamelist = self.application.dbapi.getAllRelativeNamebyUid(event["userid"])
 		print rNamelist
 		if(user["id"] not in rNamelist):
 			self.write("{'state':2}")
@@ -125,16 +125,14 @@ class FinishHandler(tornado.web.RequestHandler):
 			info['uid'] = item['uid']
 			data.append(info)
 			#data.append("{'username':" + str(item['username']) + ",'uid':"+ str(item['uid'])+"}")
-		print data
 		writedata = {}
 		writedata['state'] = 3
 		writedata['helpers'] = data
-		print writedata
 		#push
 		pushlist = self.application.dbapi.getFollowerCidByEid(j['eventid'])
 		helperlist = self.application.dbapi.getHelpersCidbyEid(j['eventid'])
 		pushlist.extend(helperlist)
-		relativelist = self.application.dbapi.getRelativesCidbyUid(user["id"])
+		relativelist = self.application.dbapi.getRelativesCidbyUid(event["userid"])
 		pushlist.extend(relativelist)
 		pushlist =  list(Set(pushlist))
 		if(user['cid'] in pushlist):
@@ -144,6 +142,7 @@ class FinishHandler(tornado.web.RequestHandler):
 		pushdata['type'] = "endhelp"
 		data['eventid'] = j['eventid']
 		data['time'] = currenttime.strftime('%Y-%m-%d %H:%M:%S')
+		data['username'] = event['username']
 		pushdata['data'] = data
 		self.application.push.pushToList(pushlist,json_encode(pushdata))
 		self.write(json_encode(writedata))
@@ -160,13 +159,13 @@ class GivecreditHandler(tornado.web.RequestHandler):
 		#content='{"eventid":1,"credits":[{"username":"test2","cridit":5},{"username":"test6","cridit":1}]}'
 		jobj=json.loads(content)
 		result=[]
-		event = self.application.dbapi.getEventByEventId(j['eventid'])
+		event = self.application.dbapi.getEventByEventId(jobj['eventid'])
 		askuser = self.application.dbapi.getUserInfobyUid(event['usrid'])
 		for issue in jobj["credits"]:
 			temp = self.application.dbapi.setCreditByEventIdAndUserName(jobj["eventid"],issue["username"],issue["cridit"])
 			result.append({"helpername":issue["username"],"result":temp})
 			helper = self.application.dbapi.getUserInfobyName(issue['username'])
-			self.application.util.set(event,askuser,helper,issue["cridit"],self.application.dbapi)
+			self.application.util.setCreditforHelper(event,askuser,helper,issue["cridit"],self.application.dbapi)
 		self.write(str(result))
 
 class QuitaidHandler(tornado.web.RequestHandler):
