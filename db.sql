@@ -66,7 +66,7 @@ CREATE TABLE info
 	latitude DECIMAL(12,7),
 	longitude DECIMAL(12,7),
 	primary key(id),
-	foreign key(id) references user(id)
+	foreign key(id) references user(id) ON DELETE CASCADE
 	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
@@ -116,7 +116,7 @@ CREATE TABLE event
 	starttime datetime,
 	endtime	datetime,
 	primary key(id),
-	foreign key(usrid) references user(id)
+	foreign key(usrid) references user(id) ON DELETE CASCADE
 	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
@@ -136,7 +136,7 @@ CREATE TABLE helper
 	credit int,
 	primary key(id),
 	foreign key(eid) references event(id) ON DELETE CASCADE,
-	foreign key(usrid) references user(id)
+	foreign key(usrid) references user(id) ON DELETE CASCADE
 	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
@@ -169,7 +169,7 @@ CREATE TABLE support
 	time datetime,
 	primary key(id),
 	foreign key(eid) references event(id) ON DELETE CASCADE,
-	foreign key(usrid) references user(id)
+	foreign key(usrid) references user(id) ON DELETE CASCADE
 	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
@@ -181,27 +181,26 @@ CREATE TABLE tpu
 	id varchar(255) NOT NULL,
 	usrid int NOT NULL,
 	primary key(id),
-	foreign key(usrid) references user(id)
+	foreign key(usrid) references user(id) ON DELETE CASCADE
 	ON DELETE CASCADE
 )ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 /*
 临时用户关系表
-id:自增id
-uid:用户id
+uid:请求者用户id
 oid:对应用户id
 kind:关系类型(关注好友，亲友等等)
 */
 CREATE TABLE temprelation
 (
-	id int NOT NULL AUTO_INCREMENT,
 	uid int NOT NULL,
 	cid int NOT NULL,
 	kind int NOT NULL,
-	primary key(id),
-	foreign key(uid) references user(id),
-	foreign key(cid) references user(id)
-)ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+	info varchar(100) DEFAULT "invite",
+	primary key(uid,cid,kind),
+	foreign key(uid) references user(id) ON DELETE CASCADE,
+	foreign key(cid) references user(id) ON DELETE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 /*
 用户认证表
@@ -276,8 +275,8 @@ CREATE TABLE previousEvent(
 	time datetime,
 	credit double,
 	primary key(askid, helperid),
-	foreign key(askid) references user(id),
-	foreign key(helperid) references user(id)
+	foreign key(askid) references user(id) ON DELETE CASCADE,
+	foreign key(helperid) references user(id) ON DELETE CASCADE
 ) DEFAULT CHARSET = utf8;
 
 /*

@@ -309,8 +309,8 @@ class dbapi:
 		result=cursor.fetchone()
 		print result[0]
 
-		sql = "insert into info(id,cardid,name,sex,age,address,illness,credit,score,phone,vocation) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["address"],content["illness"],0,0,content["phone"],content["vocation"])
+		sql = "insert into info(id,cardid,name,sex,age,illness,credit,score,phone,vocation) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["illness"],0,0,content["phone"],content["vocation"])
 		cursor.execute(sql,param)
 		self.db.commit()
 				
@@ -561,30 +561,52 @@ class dbapi:
 		cursor.close()
 
 
-	def addtempRelationByUsername(self, u_name, r_name,kind):
+	def addtempRelationByUsername(self, u_name, r_name,kind,info):
 		result = self.getUserByUserName(u_name)
 		u_id = str(result["id"])
 		result = self.getUserByUserName(r_name)
 		r_id = str(result["id"])
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="INSERT INTO temprelation (uid, cid, kind) VALUES ('" + u_id + "', '" + r_id + "', '"+kind+"')"
-		cursor.execute(sql)
-		self.db.commit()
+		sql="INSERT INTO temprelation (uid, cid, kind,info) VALUES(%s,%s,%s,%s)"
+		param=(u_id,r_id,kind,info)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
 		cursor.close()
 
 	def deletetemprelation(self,uid,cid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select * from temprelation where uid = %s and cid =%s"
-		param=(uid,cid)
-		cursor.execute(sql,param)
-		result=cursor.fetchone()
-		kind = result['kind']
 		sql="delete from temprelation where uid = %s and cid =%s"
 		param=(uid,cid)
-		cursor.execute(sql,param)
-		self.db.commit()
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
 		cursor.close()
-		return kind
+		return
+
+	def deletetemprelationwithkind(self,uid,cid,kind):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="delete from temprelation where uid = %s and cid =%s and kind = %s"
+		param=(uid,cid,kind)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
+		cursor.close()
+		return
+
+	def gettemprelationbyCid(self,cid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="select * from temprelation where cid =%s"
+		param=(cid,)
+		cursor.execute(sql,param)
+		result = cursor.fetchall()
+		return list(result)
 
 	def addaidhelper(self, u_name, e_id):
 		result = self.getUserByUserName(u_name)

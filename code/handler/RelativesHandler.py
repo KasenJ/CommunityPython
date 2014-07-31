@@ -18,7 +18,7 @@ class AddrelativesHandler(tornado.web.RequestHandler):
 		j = json.loads(content)
 		row = self.application.dbapi.getRelationByUsername(j['u_name'], j['r_name'])
 		if row == 0:
-			self.application.dbapi.addtempRelationByUsername(j['u_name'], j['r_name'],j['kind'])
+			self.application.dbapi.addtempRelationByUsername(j['u_name'], j['r_name'],j['kind'],j['info'])
 			#push data
 			cid = self.application.dbapi.getUserByUserName(j['r_name'])['cid']
 			pushdata = {}
@@ -94,20 +94,42 @@ class AgreerelativesHandler(tornado.web.RequestHandler):
 		user = self.application.dbapi.getUserByUserName(j['u_name'])
 		cid = self.application.dbapi.getUserByUserName(j['c_name'])['id']
 		if(j['agree'] == "1"):
-			kind = self.application.dbapi.deletetemprelation(user['id'],cid)
-			self.application.dbapi.addRelationByUid(user['id'],cid,kind)
+			self.application.dbapi.deletetemprelation(user['id'],cid)
+			self.application.dbapi.addRelationByUid(user['id'],cid,j['kind'])
 			print "agree 1"
 			pushdata = {}
 			pushdata['type'] = "agree"
 			data = {}
 			data['userid'] = user['id']
 			data['username'] = user['name']
-			data['type'] = kind
+			data['type'] = j['kind']
 			self.application.push.pushToSingle(user['cid'],json_encode(pushdata))
 			state = {'state':1}
 		else:
-			self.application.dbapi.deletetemprelation(user['id'],cid)
+			self.application.dbapi.deletetemprelationwithkind(user['id'],cid,j['kind'])
 			print "agree 0"
 			state = {'state':1}
 		self.write(json_encode(state))
+		return
+
+class ValidationHandler(tornado.web.RequestHandler):
+	def get(self):
+		self.write("<p>ValidationHandler</p><form action='/api/getvalidation' method='post'><input type='submit' value='submit'></form>")
+
+	def post(self):
+		content =self.request.body
+		#content = '{"username":"test6"}'
+		j = json.loads(content)
+		user = self.application.dbapi.getUserByUserName(j['username'])
+		validations = self.application.dbapi.gettemprelationbyCid(user['id'])
+		result={}
+		if len(validations):
+			result['state'] = 1
+			for item in validations:
+				print item
+				item['u_name'] = self.application.dbapi.getUserByUserId(item['uid'])['name']
+		else:
+			result['state'] = 0
+		result['validations'] = validations
+		self.write(json_encode(result))
 		return

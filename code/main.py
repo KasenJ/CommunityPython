@@ -31,6 +31,7 @@ class app(tornado.web.Application):
 			(r"/api/deleterelatives",RelativesHandler.DeleterelativesHandler),
 			(r"/api/addrelatives",RelativesHandler.AddrelativesHandler),
 			(r"/api/agreerelatives",RelativesHandler.AgreerelativesHandler),
+			(r"/api/getvalidation",RelativesHandler.ValidationHandler),
 
 			(r"/api/history",HistoryHandler.HistoryHandler),
 
