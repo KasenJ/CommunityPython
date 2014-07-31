@@ -21,7 +21,9 @@ class RegisterHandler(tornado.web.RequestHandler):
 			self.write("{'state':2}")
 			print "cardid exist"
 			return
-		self.application.dbapi.register(j)
+		uid = self.application.dbapi.register(j)
+		self.write("{'state':3}")
+		print("Register success")
 
 		if('file' in j):
 			self.application.util.setAvatar(j['username'],j['file'],self.application.dbapi)
@@ -29,9 +31,7 @@ class RegisterHandler(tornado.web.RequestHandler):
 			avatar=open(os.path.abspath('./static/avatar/default.png'),"rb");
 			filestring=base64.standard_b64encode(avatar.read())
 			self.application.util.setAvatar(j['username'],filestring,self.application.dbapi)
-		
-		self.write("{'state':3}")
-		print("Register success")
+		self.application.score.userRegister(uid,self.application.dbapi)
 		return
 
 class LoginHandler(tornado.web.RequestHandler):
@@ -64,7 +64,7 @@ class LoginHandler(tornado.web.RequestHandler):
 		result['userid'] = user['id']
 		self.write(json_encode(result))
 		print("Login success")
-		#print self.application.util.getAvatar("12",self.application.dbapi)
+		self.application.score.userLogin(user['id'],self.application.dbapi)
 		return
 
 class UpdateCid(tornado.web.RequestHandler):
@@ -96,6 +96,7 @@ class LogoutHandler(tornado.web.RequestHandler):
 		self.application.dbapi.updateUserstate(uid,0)
 		self.write("{'state':1}")
 		print("Logout success")
+		self.application.score.checkOnlineHours(uid,self.application.dbapi)
 		return
 
 class AuthenHandler(tornado.web.RequestHandler):
@@ -105,8 +106,12 @@ class AuthenHandler(tornado.web.RequestHandler):
 	def post(self):
 		#self.write("AuthenHandler")
 		print "start"
-		print self.application.dbapi.gettemprelationbyCid(6)
-		#self.application.dbapi.addtempRelationByUsername("test2","test6",1,"lall")
+		#self.application.score.userLogin(1,self.application.dbapi)
+		#self.application.score.giveCredit(1,1,self.application.dbapi)
+		#self.application.score.joinSupport(1,self.application.dbapi)
+		#self.application.score.sendSupport(1,self.application.dbapi)
+		#self.application.score.checkOnlineHours(1,self.application.dbapi)
+		#self.application.score.quitSupport(1,self.application.dbapi)
 		print "lall"
 		return
 
@@ -148,13 +153,13 @@ class SearchHandler(tornado.web.RequestHandler):
 		if(j['searchtype'] == "exactSearch"):
 			user = self.application.dbapi.getUserByUserName(j['username'])
 			if(user is not None):
-				user = []
+				users = []
 				username = {}
 				username['username'] = user['name']
-				user.append(username)
+				users.append(username)
 				result ={}
 				result['state'] = 1
-				result['users'] = user
+				result['users'] = users
 			else:
 				result =  {'state': 0}
 		elif(j['searchtype'] == "keywordSearch"):

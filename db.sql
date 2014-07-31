@@ -72,7 +72,6 @@ CREATE TABLE info
 	longitude DECIMAL(12,7),
 	primary key(id),
 	foreign key(id) references user(id) ON DELETE CASCADE
-	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
 /*
@@ -122,7 +121,6 @@ CREATE TABLE event
 	endtime	datetime,
 	primary key(id),
 	foreign key(usrid) references user(id) ON DELETE CASCADE
-	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
 /*
@@ -142,7 +140,6 @@ CREATE TABLE helper
 	primary key(id),
 	foreign key(eid) references event(id) ON DELETE CASCADE,
 	foreign key(usrid) references user(id) ON DELETE CASCADE
-	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
 
@@ -175,7 +172,6 @@ CREATE TABLE support
 	primary key(id),
 	foreign key(eid) references event(id) ON DELETE CASCADE,
 	foreign key(usrid) references user(id) ON DELETE CASCADE
-	ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
 
  /*
@@ -187,7 +183,6 @@ CREATE TABLE tpu
 	usrid int NOT NULL,
 	primary key(id),
 	foreign key(usrid) references user(id) ON DELETE CASCADE
-	ON DELETE CASCADE
 )ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 /*
@@ -312,17 +307,16 @@ CREATE TABLE score_info(
 delimiter //
 CREATE
 	PROCEDURE init_func() 
-	BEGIN
-		UPDATE score_info SET login_time=TIMESTAMP('2000-01-01 00:00:00'), score1=0, score2=0, score3=0, score4=0, score5=0, score6=0, score7=0, score8=0, score9=0, score10=0, score11=0;
-	END//
+	BEGIN UPDATE score_info SET login_time="2000-01-01 00:00:00", score1=0, score2=0, score3=0, score4=0, score5=0, score6=0, score7=0, score8=0, score9=0, score10=0, score11=0;  END// 
 
 delimiter ;
 
 CREATE 
-	EVENT IF NOT EXISTS init_score_info
-	ON SCHEDULE EVERY 1 DAY STARTS TIMESTAMP(CONCAT(CURRENT_DATE,'00:00:00'))
-	ON COMPLETION PRESERVE
-	DO CALL init_func();
+	EVENT IF NOT EXISTS init_score_info 
+	ON SCHEDULE EVERY 1 DAY STARTS (CONCAT(CURRENT_DATE(),' 00:00:00')) 
+	ON COMPLETION PRESERVE 
+	DO CALL init_func(); 
+	
 /*
 添加6用户（3男3女）:
 */

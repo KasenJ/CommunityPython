@@ -6,18 +6,13 @@ from handler import *
 from push import *
 from xml.dom.minidom import parse,parseString
 
-#login url handler
-class IndexHandler(tornado.web.RequestHandler):
-				def get(self):
-								self.render("index.html")
-
 class app(tornado.web.Application):
 	def __init__(self):
 		settings = {
 			"static_path": os.path.join(os.path.dirname(__file__), "static"),
 			"debug": True
 		}
-		handlers=[(r"/",IndexHandler),
+		handlers=[
 			(r"/api/login",UserHandler.LoginHandler),
 			(r"/api/register",UserHandler.RegisterHandler),
 			(r"/api/userauthentication",UserHandler.AuthenHandler),

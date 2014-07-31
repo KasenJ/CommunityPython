@@ -42,7 +42,11 @@ class GetUserInfoHandler(tornado.web.RequestHandler):
 			self.write("{'state':1}")
 			print "username not exist"
 			return
-		result = self.application.dbapi.getUsermassegeByUserId(user['id'])
+		result = self.application.dbapi.getUsermessegeByUserId(user['id'])
+		scorelimit = self.application.score.getRankByScore(result['score'])
+		result['scoreMin'] = scorelimit['scoreMin']
+		result['scoreMax'] = scorelimit['scoreMax']
+		result['scoreLevel'] = scorelimit['scoreLevel']
 		print result
 		self.write("{'result':"+ json_encode(result)+"}")
 		print("GetUserInfo success")

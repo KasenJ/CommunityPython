@@ -69,17 +69,19 @@ class EventHandler(tornado.web.RequestHandler):
 			else:
 				result['canend'] = 0
 			if(self.application.dbapi.getFollow(uid,jobj['eventid']) is None):
-				result['isfollow'] = 0
+				if(helpevent['username'] == jobj['username']):
+					result['isfollow'] = 1
+				else:
+					result['isfollow'] = 0
 			else:
 				result['isfollow'] = 1
 			result['support']=self.application.dbapi.getSupportsByEventId(jobj['eventid'])
 			for support in result['support']:
 				user=self.application.dbapi.getUserByUserId(support['usrid'])
 				if(user):
-					support['username']=user['name'];
-					#avatar=self.application.util.getAvatar(user['name'],self.application.dbapi)
-					#support['avatar']=avatar
-		print json_encode(result)
+					support['username']=user['name']
+					avatar=self.application.util.getAvatarbyUid(support['usrid'])
+					support['avatar']=avatar
 		self.write(json_encode(result))
 
 '''Yeqin Zheng, 09/07/2014'''
@@ -94,6 +96,7 @@ class AddaidHandler(tornado.web.RequestHandler):
 
 		result = self.application.dbapi.addaidhelper(j['username'], j['eventid'])
 		self.write("{'state': " + result + "}")
+		self.application.score.joinSupport(self.application.dbapi.getUserByUserName(j['username'])['id'],self.application.dbapi)
 
 
 class FinishHandler(tornado.web.RequestHandler):
@@ -167,6 +170,7 @@ class GivecreditHandler(tornado.web.RequestHandler):
 			helper = self.application.dbapi.getUserInfobyName(issue['username'])
 			self.application.util.setCreditforHelper(event,askuser,helper,issue["cridit"],self.application.dbapi)
 		self.write(str(result))
+		application.score.giveCredit(event['usrid'],jobj['eventid'],self.application.dbapi)
 
 class QuitaidHandler(tornado.web.RequestHandler):
 	def get(self):
@@ -189,6 +193,7 @@ class QuitaidHandler(tornado.web.RequestHandler):
 		self.application.dbapi.deleteHelperbyUidEid(uid,j['eventid'])
 		print "quit success"
 		self.write("{'state':1}") 
+		application.score.quitSupport(uid,self.application.dbapi)
 		return
 
 class SendsupportHandler(tornado.web.RequestHandler):
@@ -199,7 +204,7 @@ class SendsupportHandler(tornado.web.RequestHandler):
 		content =self.request.body
 		#content='{"username":"test1","eid":4,"message":{"content":"TestssCofffntent"}}'
 		jobj=json.loads(content)
-		user = self.application.dbapi.getUserByUserName(j['username'])
+		user = self.application.dbapi.getUserByUserName(jobj['username'])
 		result=self.application.dbapi.addSupportByEventIdAndUserName(jobj["eid"],jobj["username"],jobj["message"])
 		if(result['errorCode'] == 200):
 			pushlist = self.application.dbapi.getFollowerCidByEid(jobj['eid'])
@@ -222,6 +227,7 @@ class SendsupportHandler(tornado.web.RequestHandler):
 			pushdata['data'] = data
 			self.application.push.pushToList(pushlist,json_encode(pushdata))
 		self.write(json_encode(result))
+		self.application.score.sendSupport(user['id'],self.application.dbapi)
 
  
 class SupportmessageHandler(tornado.web.RequestHandler):

@@ -390,7 +390,7 @@ class dbapi:
 				 and event.usrid = user.id
 				 and event.state = 0
 				 and round(6378.138*2*asin(sqrt(pow(sin( (event.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(event.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (event.longitude*pi()/180-(%s)*pi()/180)/2),2)))) < %s 
-				 ORDER BY starttime DESC"""
+				 ORDER BY starttime DESC limit 20"""
 		param = (lat,lat,lon,lon,lat,lat,lon,distance)
 		cursor.execute(sql,param)
 		result = []
@@ -667,10 +667,11 @@ class dbapi:
 			else:
 				cursor.execute("select now()")
 				currentTime=cursor.fetchone()
-				sql = "select * from event where usrid = %s and kind = %s and latitude = %s and longitude = %s and TIMESTAMPDIFF(MINUTE,%s,starttime)<= 10"
-				param = (usrid["id"],message["kind"],message['latitude'],message['longitude'],currentTime['now()'])
-				cursor.execute(sql,param)
-				if(cursor.fetchall()):
+				#sql = "select * from event where usrid = %s and kind = %s and latitude = %s and longitude = %s and TIMESTAMPDIFF(MINUTE,%s,starttime)<= 10"
+				#param = (usrid["id"],message["kind"],message['latitude'],message['longitude'],currentTime['now()'])
+				#cursor.execute(sql,param)
+				#if(cursor.fetchall()):
+				if(False):
 					return {"state":4,"errorDesc":"cannnot send the same message in 10 minute"}
 				sql="insert into event (usrid,kind,state,content,starttime,latitude,longitude) values (%s,%s,%s,%s,%s,%s,%s)"
 				param=(usrid["id"],message["kind"],0,message["content"],currentTime['now()'],message['latitude'],message['longitude'])
@@ -1081,7 +1082,7 @@ class dbapi:
 
 	def getScoreInfoById(self,uid):
 		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql = "select * from score_op where id = %s"
+		sql = "select * from score_info where id = %s"
 		param = (uid,)
 		cursor.execute(sql, param)
 		result = cursor.fetchone()
@@ -1100,8 +1101,13 @@ class dbapi:
 
 	def getGreatestHelperId(self,eid):
 		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql = "select usrid from helper where eid = %s and credit = max(select max(credit) from helper where eid = %s)"
-		param = (eid,eid)
+		sql = "select max(credit) from helper where eid = %s"
+		param = (eid,)
+		cursor.execute(sql, param)
+		cre = cursor.fetchone()
+		cre = cre['max(credit)']
+		sql = "select usrid from helper where eid = %s and credit = %s"
+		param = (eid,cre)
 		cursor.execute(sql, param)
 		result = cursor.fetchall()
 		return result

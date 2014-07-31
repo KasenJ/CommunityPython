@@ -1,5 +1,6 @@
 import os,xml.etree.ElementTree as ET
-from time import *
+import time
+from datetime import datetime
 class score:
 	def __init__(self):
 		_config=ET.parse(os.path.abspath("./static/config.xml"))
@@ -63,22 +64,24 @@ class score:
 					dbapi.operateScoreById(uid,score_op)
 					dbapi.operateScoreInfoById(uid,cond,score_op)
 				elif abs(info[name]+self.ops[cond]["op"]) <= abs(self.ops[cond]["max"]):
-					dbapi.operateScoreById(uid,self.ops[cond]["op"])
+					dbapi.operateScoreById(uid,score_op)
 					dbapi.operateScoreInfoById(uid,cond,score_op)
 				else:
 					return False
+
 			return True
 		else:
 			return False
 
 	def userRegister(self,uid,dbapi):
+		dbapi.addScoreInfoById(uid)
 		return self.updateScoreByCase(uid,1,dbapi)
 
 	def userLogin(self,uid,dbapi):
 		info = dbapi.getScoreInfoById(uid)
 		if info is not None:
 			if info['login_time'].strftime("%Y-%m-%d %H:%M:%S") == "2000-01-01 00:00:00":
-				dbpai.setScoreTimeById(uid,time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time())))
+				dbapi.setScoreTimeById(uid,time.strftime("%Y-%m-%d %H:%M:%S",time.localtime()))
 				return self.updateScoreByCase(uid,2,dbapi)
 			else:
 				return False
@@ -87,7 +90,6 @@ class score:
 
 	def giveCredit(self,uid,eid,dbapi):
 		self.updateScoreByCase(uid,3,dbapi)
-
 		#condition 7
 		helpers = dbapi.getGreatestHelperId(eid)
 		for helper in helpers:
@@ -103,7 +105,7 @@ class score:
 	def checkOnlineHours(self,uid,dbapi):
 		info = dbapi.getScoreInfoById(uid)
 		if info is not None:
-			if (time.localtime(time.time()) - info['login_time']).hours() >= 12:
+			if datetime.fromtimestamp(time.time()).hour - info['login_time'].hour >= 12:
 				return self.updateScoreByCase(uid,6,dbapi)
 
 	def quitSupport(self,uid,dbapi):
