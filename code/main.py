@@ -48,8 +48,7 @@ class app(tornado.web.Application):
 			(r"/api/cancelfollow",FollowHandler.cancelFollowHandler),
 			
 			(r"/api/thirdpartylogin",ThirdPartHandlers.ThirdPartyLoginHandler),
-			(r"/api/thirdpartylogout",ThirdPartHandlers.ThirdPartyLogoutHandler),
-			(r"/api/thirdpartyremove",ThirdPartHandlers.ThirdPartyRemoveAccountHandler),
+			(r"/api/thirdpartyremoveaccount",ThirdPartHandlers.ThirdPartyRemoveAccountHandler),
 			(r"/api/thirdpartyfilluserinfo",ThirdPartHandlers.ThirdPartyFillUserInfoHandler),
 
 			(r"/api/authstate", Authorize.AuthStateHandler),

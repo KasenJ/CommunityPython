@@ -11,32 +11,81 @@ class HelpmessageHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		content =self.request.body
-		#content='{"username":"test1","video":"TestAssist","audeo":"dsds","message":{"kind":1,"content":"TestContent", "videosign":1,,"audiosign":1,"latitude":23.000000,"longitude":23.000000}}'
+		#content='{"username":"test1","message":{"kind":1,"content":"TestContent", "video":"TestAssist","videosign":1,"audeo":"dsds","audiosign":1,"latitude":23.000000,"longitude":23.000000}}'
 		jobj=json.loads(content)
 		result = self.application.dbapi.addEventByUserName(jobj["username"],jobj["message"])
-		#add push message,make all distance 5km
+		self.write(json_encode(result))
 
-		if(jobj['message']['videosign'] == "1"):
+		if(jobj['message']['videosign'] =="1"):
+			print "test1"
 			self.application.util.setVideobyEid(result['eventid'],jobj['video'])
 
-		if(jobj['message']['audiosign'] == "1"):
+		if(jobj['message']['audiosign'] =="1"):
+			print "test2"
 			self.application.util.setAudiobyEid(result['eventid'],jobj['audio'])
 
-		if(result["state"] == 1):
+		"""if(result["state"] == 1):
 			eventinfo = self.application.dbapi.getEventandUserByEventId(result['eventid'])
-			#eventinfo['audio'] = jobj['message']['videosign']
-			#eventinfo['video'] = jobj['message']['audiosign']
+			eventinfo['audio'] = jobj['message']['videosign']
+			eventinfo['video'] = jobj['message']['audiosign']
 			print '{"type":"help","data":'+json_encode(eventinfo)+'}'
 			info = self.application.dbapi.getUserInfobyName(jobj["username"])
 			cidlist = self.application.dbapi.getUserCidAround(info["longitude"],info["latitude"],5)
 			relativelist = self.application.dbapi.getRelativesCidbyUid(info['id'])
 			cidlist.extend(relativelist)
 			cidlist =  list(Set(cidlist))
-			if(info['cid'] in cidlist):
-				cidlist.remove(info['cid'])
-			self.application.push.pushToList(cidlist,'{"type":"help","data":'+json_encode(eventinfo)+'}')
-		
-		self.write(json_encode(result))
+			cidlist.remove(info['cid'])
+			print cidlist
+			self.application.push.pushToList(cidlist,'{"type":"help","data":'+json_encode(eventinfo)+'}')"""
+		if(result["state"] == 1):
+			eventinfo = self.application.dbapi.getEventandUserByEventId(result['eventid'])
+			eventinfo['audio'] = jobj['message']['videosign']
+			eventinfo['video'] = jobj['message']['audiosign']
+			pushlist = []
+			askuser = self.application.dbapi.getUserInfobyName(jobj["username"])
+			relativelist = self.application.dbapi.getRelativesCidbyUid(askuser['id'])
+			print relativelist
+			pushlist.extend(relativelist)
+			friendlist =   self.application.dbapi.getRelativesIdbyUid(askuser['id'])
+			hashelpaskuserlist = self.application.dbapi.getHelpersIdbyUid(askuser['id'])
+			distance = 3
+			special = []
+			if(jobj['message']['kind'] ==1):#anquan
+				print 1
+				special = self.application.dbapi.getAroundbyvocationOrKind(askuser["longitude"],askuser["latitude"],1,4,20,5)
+				print special
+				pushlist.extend(special)
+				aroundhelpers =  self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,1)
+				while len(aroundhelpers) <= 50 and distance <= 7:
+					distance +=2
+					aroundhelpers=  self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,1)
+				
+				
+			elif(jobj['message']['kind'] ==2):
+				print 2
+				aroundhelpers =  self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,2)
+				while len(aroundhelpers) <= 10 and distance <= 7:
+					distance +=2
+					aroundhelpers =  self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,2)
+
+			else:#jiankang
+				print 3
+				special = self.application.dbapi.getAroundbyvocationOrKind(askuser["longitude"],askuser["latitude"],1,5,10,5)
+				print special
+				pushlist.extend(special)
+				aroundhelpers =  self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,3)
+				while len(aroundhelpers) <= 20  and distance <= 5:
+					distance +=2
+					aroundhelpers = self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],distance,3)
+			
+			predictlist = self.application.util.getPushlistByCredit(askuser,aroundhelpers,friendlist,hashelpaskuserlist,0.5,self.application.dbapi)
+			print predictlist
+			pushlist.extend(predictlist)
+			pushlist =  list(Set(pushlist))
+			if(askuser['cid'] in pushlist):
+				pushlist.remove(askuser['cid'])
+			print pushlist
+			self.application.push.pushToList(pushlist,'{"type":"help","data":'+json_encode(eventinfo)+'}')
 		return
 
 class EventHandler(tornado.web.RequestHandler):
@@ -49,11 +98,12 @@ class EventHandler(tornado.web.RequestHandler):
 		jobj=json.loads(content)
 		uid = self.application.dbapi.getUserByUserName(jobj['username'])["id"]
 		helpevent=self.application.dbapi.getEventandUserByEventId(jobj['eventid'])
+		print helpevent
 		result={}
 		if(helpevent):
 			helpevent['follows'] = self.application.dbapi.getFollowsByEventId(jobj['eventid'])['count']
 			helpevent['helpers'] = len(self.application.dbapi.getHelpersCidbyEid(jobj['eventid']))
-			result['event']=helpevent
+			result['event'] = helpevent
 			ishelper = self.application.dbapi.checkifUseraddHelper(uid,jobj['eventid'])
 			if(ishelper is None):
 				if(helpevent['username'] == jobj['username']):
@@ -75,11 +125,12 @@ class EventHandler(tornado.web.RequestHandler):
 					result['isfollow'] = 0
 			else:
 				result['isfollow'] = 1
+			print result
 			result['support']=self.application.dbapi.getSupportsByEventId(jobj['eventid'])
 			for support in result['support']:
 				user=self.application.dbapi.getUserByUserId(support['usrid'])
 				if(user):
-					support['username']=user['name']
+					support['username']=user['name'];
 					avatar=self.application.util.getAvatarbyUid(support['usrid'])
 					support['avatar']=avatar
 		self.write(json_encode(result))
@@ -96,7 +147,8 @@ class AddaidHandler(tornado.web.RequestHandler):
 
 		result = self.application.dbapi.addaidhelper(j['username'], j['eventid'])
 		self.write("{'state': " + result + "}")
-		self.application.score.joinSupport(self.application.dbapi.getUserByUserName(j['username'])['id'],self.application.dbapi)
+		uid =self.application.dbapi.getUserByUserName(j['username'])['id']
+		self.application.score.joinSupport(uid,self.application.dbapi)
 
 
 class FinishHandler(tornado.web.RequestHandler):
@@ -114,7 +166,6 @@ class FinishHandler(tornado.web.RequestHandler):
 			print "event not exist"
 			return
 		rNamelist = self.application.dbapi.getAllRelativeNamebyUid(event["userid"])
-		print rNamelist
 		if(user["id"] not in rNamelist):
 			self.write("{'state':2}")
 			print "user not relative or itself,can not update sate"
@@ -127,6 +178,7 @@ class FinishHandler(tornado.web.RequestHandler):
 			info['username'] = item['username']
 			info['uid'] = item['uid']
 			data.append(info)
+			self.application.dbapi.UpdateInfotimebyUid(item['uid'])
 			#data.append("{'username':" + str(item['username']) + ",'uid':"+ str(item['uid'])+"}")
 		writedata = {}
 		writedata['state'] = 3
@@ -170,7 +222,7 @@ class GivecreditHandler(tornado.web.RequestHandler):
 			helper = self.application.dbapi.getUserInfobyName(issue['username'])
 			self.application.util.setCreditforHelper(event,askuser,helper,issue["cridit"],self.application.dbapi)
 		self.write(str(result))
-		application.score.giveCredit(event['usrid'],jobj['eventid'],self.application.dbapi)
+		self.application.score.giveCredit(event['usrid'],jobj['eventid'],self.application.dbapi)
 
 class QuitaidHandler(tornado.web.RequestHandler):
 	def get(self):

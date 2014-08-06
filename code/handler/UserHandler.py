@@ -42,9 +42,9 @@ class LoginHandler(tornado.web.RequestHandler):
 		content = self.request.body
 		#content = '{"username":"12","password":"1","latitude":23.000000,"longitude":23.000000}'
 		j = json.loads(content)
-		if(j['username'].strip()==''):
+		if(j['username'].strip()=='' or j['username'].strip()[0]== '*'):
 			self.write("{'state':1}")
-			print "username is null"
+			print "username is illegal"
 			return
 
 		user = self.application.dbapi.getUserByUserName(j['username'])
@@ -90,6 +90,7 @@ class LogoutHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		content =self.request.body
+		print content
 		#content = '{"username":"11oo"}'
 		j = json.loads(content)
 		uid = self.application.dbapi.getUserByUserName(j['username'])['id']
@@ -106,12 +107,19 @@ class AuthenHandler(tornado.web.RequestHandler):
 	def post(self):
 		#self.write("AuthenHandler")
 		print "start"
-		#self.application.score.userLogin(1,self.application.dbapi)
-		#self.application.score.giveCredit(1,1,self.application.dbapi)
-		#self.application.score.joinSupport(1,self.application.dbapi)
-		#self.application.score.sendSupport(1,self.application.dbapi)
-		#self.application.score.checkOnlineHours(1,self.application.dbapi)
-		#self.application.score.quitSupport(1,self.application.dbapi)
+		content='{"username":"test1","message":{"kind":1}}'
+		jobj=json.loads(content)
+		askuser = self.application.dbapi.getUserInfobyName(jobj["username"])
+		print self.application.dbapi.getAroundbyvocationOrKind(askuser["longitude"],askuser["latitude"],1,5,10,5)
+		#print askuser
+		aroundhelpers = self.application.dbapi.getUserAroundbykind(askuser["longitude"],askuser["latitude"],5,jobj['message']['kind'])
+		#print aroundhelpers
+		friendlist =   self.application.dbapi.getRelativesIdbyUid(askuser['id'])
+		#print friendlist
+		hashelpaskuserlist = self.application.dbapi.getHelpersIdbyUid(askuser['id'])
+		#print hashelpaskuserlist
+		pushlist = self.application.util.getPushlistByCredit(askuser,aroundhelpers,friendlist,hashelpaskuserlist,0.2,self.application.dbapi)
+		#print pushlist	
 		print "lall"
 		return
 
@@ -122,6 +130,7 @@ class CancelHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		content = self.request.body
+		print content
 		#content = '{"username":"test","password":"test"}'
 		j = json.loads(content)
 		if(j['username'].strip()=='' ):
@@ -148,6 +157,7 @@ class SearchHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		content =self.request.body
+		print content
 		#content = '{"searchtype":"2","fromage":"20","endage":"30"}'
 		j = json.loads(content)
 		if(j['searchtype'] == "exactSearch"):

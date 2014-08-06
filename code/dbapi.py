@@ -10,10 +10,10 @@ import thread,time
 class dbapi:
 	def __init__(self):
 		self.host="localhost"
-		#self.user="comhelp"
-		#self.passwd="20140629"
-		self.user="root"
-		self.passwd="root"
+		self.user="comhelp"
+		self.passwd="20140629"
+		#self.user="root"
+		#self.passwd="root"
 		self.dbname="community"
 		self.charset="utf8"
 		self.db=MySQLdb.connect(host=self.host,user=self.user,passwd=self.passwd,db=self.dbname,charset=self.charset)
@@ -143,7 +143,7 @@ class dbapi:
 
 	def getEventandUserByEventId(self,eventid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="""select user.name as username,user.id as userid,content,starttime as time,event.kind as kind,event.id as eventid, event.latitude as latitude,event.longitude as longitude  from event,user
+		sql="""select user.name as username,user.id as userid,content,starttime as time,event.kind as kind,event.id as eventid, event.latitude as latitude,event.longitude as longitude,Video as video, audio from event,user
 				where event.id=%s and user.id = event.usrid"""
 		param=(eventid,)
 		cursor.execute(sql,param)
@@ -274,7 +274,7 @@ class dbapi:
 
 	def getRelativesCidbyUid(self,uid):
 		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
-		sql="select user.cid from relation,user where usrid = %s and usrid = user.id"
+		sql="select user.cid from relation,user where usrid = %s and relation.cid = user.id"
 		param=(uid,)
 		cursor.execute(sql,param)
 		result = []
@@ -282,7 +282,25 @@ class dbapi:
 			result.append(row['cid'])
 		cursor.close()
 		return result
-
+	
+	def getRelativesIdbyUid(self,uid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="select cid as id from relation where usrid = %s"
+		param=(uid,)
+		cursor.execute(sql,param)
+		result = cursor.fetchall()
+		cursor.close()
+		return list(result)
+	
+	def getHelpersIdbyUid(self,uid):
+		cursor=self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql="select DISTINCT helper.usrid as id from event,helper where event.usrid = %s and event.id = helper.eid"
+		param=(uid,)
+		cursor.execute(sql,param)
+		result = cursor.fetchall()
+		cursor.close()
+		return list(result)
+	
 	#check if cardid exist
 	#exist return dict
 	#not exist return none
@@ -309,8 +327,8 @@ class dbapi:
 		result=cursor.fetchone()
 		print result[0]
 
-		sql = "insert into info(id,cardid,name,sex,age,illness,credit,score,phone,vocation) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["illness"],0,0,content["phone"],content["vocation"])
+		sql = "insert into info(id,cardid,name,sex,age,illness,score,phone,vocation) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		param = (result[0],content["cardid"],content["realname"],content["sex"],content["age"],content["illness"],0,content["phone"],content["vocation"])
 		cursor.execute(sql,param)
 		self.db.commit()
 				
@@ -337,6 +355,32 @@ class dbapi:
 		param = (cid,uid)
 		cursor.execute(sql,param)
 		self.db.commit()
+		cursor.close()
+		return
+	
+	def UpdateInfotimebyUid(self,uid):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		cursor.execute("select now()")
+		currentTime=cursor.fetchone()
+		sql ="update info set time = %s where id = %s"
+		print currentTime['now()']
+		param = (currentTime['now()'],uid)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
+		cursor.close()
+		return
+	def updateUserbetagama(self,uid,beta,gama):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql ="update info set beta = %s, gama = %s where id = %s"
+		param = (beta,gama,uid)
+		try:
+			cursor.execute(sql,param)
+			self.db.commit()
+		except:
+			self.db.rollback()
 		cursor.close()
 		return
 
@@ -390,7 +434,7 @@ class dbapi:
 				 and event.usrid = user.id
 				 and event.state = 0
 				 and round(6378.138*2*asin(sqrt(pow(sin( (event.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(event.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (event.longitude*pi()/180-(%s)*pi()/180)/2),2)))) < %s 
-				 ORDER BY starttime DESC limit 20"""
+				 ORDER BY starttime DESC limit 15"""
 		param = (lat,lat,lon,lon,lat,lat,lon,distance)
 		cursor.execute(sql,param)
 		result = []
@@ -439,22 +483,55 @@ class dbapi:
 			data={'state':0}#the user not exist,return state 0
 		#result=json.dumps(data)
 		return data
-
-	#updateuser credit score in info,use for givecredit
-	#pre cond:eid,uid exist,score >=0
-	#after: update data credit,score in info
-	"""def updateUserCreditScore(self,eid,uid,score):
-		cursor = self.db.cursor()
-		sql = "update info set score = score + %s,credit = (credit+5)/3 where id = %s"
-		param = (score,uid)
-		try:
-			cursor.execute(sql,param)
-			self.db.commit()
-		except:
-			self.db.rollback()
+	
+	def getUserAroundbykind(self,lon,lat,distance,kind):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		if(kind == 1):
+			sql = """select user.id as id,user.name as name,info.credit as credit ,user.cid as cid from user,info where
+				exists(select id from info where latitude <= (%s+1) and latitude >= (%s-1) and longitude <= (%s+1) and longitude>=(%s-1))
+				and user.id = info.id
+				and (age>=20 and age <=40)
+				and round(6378.138*2*asin(sqrt(pow(sin( (info.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(info.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (info.longitude*pi()/180-(%s)*pi()/180)/2),2)))) < %s""" 
+			param = (lat,lat,lon,lon,lat,lat,lon,distance)
+		elif(kind == 2):
+			sql ="""select user.id as id,user.name as name,info.credit as credit ,user.cid as cid from user,info where
+				exists(select id from info where latitude <= (%s+1) and latitude >= (%s-1) and longitude <= (%s+1) and longitude>=(%s-1))
+				and user.id = info.id
+				and (age>=20 and age <=50)
+				and round(6378.138*2*asin(sqrt(pow(sin( (info.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(info.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (info.longitude*pi()/180-(%s)*pi()/180)/2),2)))) < %s"""
+			param = (lat,lat,lon,lon,lat,lat,lon,distance)
+		else:
+			sql = """select user.id as id,user.name as name,info.credit as credit ,user.cid as cid from user,info where
+				exists(select id from info where latitude <= (%s+1) and latitude >= (%s-1) and longitude <= (%s+1) and longitude>=(%s-1))
+				and user.id = info.id
+				and round(6378.138*2*asin(sqrt(pow(sin( (info.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(info.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (info.longitude*pi()/180-(%s)*pi()/180)/2),2)))) < %s"""
+			param = (lat,lat,lon,lon,lat,lat,lon,distance)
+		cursor.execute(sql,param)
+		sqlre = cursor.fetchall()
+		return list(sqlre)
+	
+	def getAroundbyvocationOrKind(self,lon,lat,vocation,u_kind,vocation_limit,u_limit):
+		cursor = self.db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+		sql = """(select user.cid as cid from user,info where
+				exists(select id from info where latitude <= (%s+1) and latitude >= (%s-1) and longitude <= (%s+1) and longitude>=(%s-1))
+				and user.id = info.id
+				and (vocation = %s)
+				order by round(6378.138*2*asin(sqrt(pow(sin( (info.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(info.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (info.longitude*pi()/180-(%s)*pi()/180)/2),2)))) asc limit %s)
+				UNION
+				(select user.cid as cid from user,info where
+				exists(select id from info where latitude <= (%s+1) and latitude >= (%s-1) and longitude <= (%s+1) and longitude>=(%s-1))
+				and user.id = info.id
+				and (kind = %s)
+				order by round(6378.138*2*asin(sqrt(pow(sin( (info.latitude*pi()/180-(%s)*pi()/180)/2),2)+cos(info.latitude*pi()/180)*cos((%s)*pi()/180)* pow(sin( (info.longitude*pi()/180-(%s)*pi()/180)/2),2)))) asc limit %s)"""
+		param = (lat,lat,lon,lon,vocation,lat,lat,lon,vocation_limit,lat,lat,lon,lon,u_kind,lat,lat,lon,u_limit)
+		cursor.execute(sql,param)
+		cursor.close
+		result = []
+		for row in cursor.fetchall():
+			result.append(row['cid'])
 		cursor.close()
-		return"""
-
+		return result
+	
 	#update user info by username,sex,age,phone,address,illness
 	#pre cond:uid exist
 	#after: update user info for what it pass
@@ -692,7 +769,7 @@ class dbapi:
 	def UpdateEventVideoAndAudio(self,eid):
 		cursor = self.db.cursor()
 		sql = "update event set video = %s,audio = %s where id = %s"
-		param = ('./static/Video/'+str(uid)+'/'+str(uid)+'.3gp','./static/Audio/'+str(uid)+'/'+str(uid)+'.amr',eid)
+		param = ('http://114.215.133.61:8080/static/Video/'+str(eid)+'/'+str(eid)+'.3gp','http://114.215.133.61:8080/static/Audio/'+str(eid)+'/'+str(eid)+'.amr',eid)
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
@@ -701,7 +778,7 @@ class dbapi:
 	def UpdateEventVideo(self,eid):
 		cursor = self.db.cursor()
 		sql = "update event set video = %s where id = %s"
-		param = ('./static/Video/'+str(uid)+'/'+str(uid)+'.3gp',eid)
+		param = ('http://114.215.133.61:8080/static/Video/'+str(eid)+'/'+str(eid)+'.3gp',eid)
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()
@@ -710,7 +787,7 @@ class dbapi:
 	def UpdateEventAudio(self,eid):
 		cursor = self.db.cursor()
 		sql = "update event set audio = %s where id = %s"
-		param = ('./static/Audio/'+str(uid)+'/'+str(uid)+'.amr',eid)
+		param = ('http://114.215.133.61:8080/static/Audio/'+str(eid)+'/'+str(eid)+'.amr',eid)
 		cursor.execute(sql,param)
 		self.db.commit()
 		cursor.close()

@@ -31,6 +31,6 @@ class HistoryHandler(tornado.web.RequestHandler):
 		supports = self.application.dbapi.getSupportsbyUid(uid)
 		for item in supports:
 			item['time'] = item['time'].strftime('%Y-%m-%d %H:%M:%S')
-
+		print json_encode(events),json_encode(supports)
 		self.write('{"state":1,"events":'+json_encode(events)+',"supports":'+json_encode(supports)+'}')
 		return

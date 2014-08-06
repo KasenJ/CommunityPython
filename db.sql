@@ -34,7 +34,7 @@ CREATE TABLE user
 	kind int NOT NULL,
 	password varchar(30),
     cid varchar(40),
-    state int,
+    state int DEFAULT 0,
 	primary key(id),
 	unique(name)
 )DEFAULT CHARSET=utf8;
@@ -66,10 +66,13 @@ CREATE TABLE info
 	phone varchar(25),
 	address varchar(255),
 	illness varchar(255),
-	credit double,
+	credit double DEFAULT 0.4,
 	score int,
 	latitude DECIMAL(12,7),
 	longitude DECIMAL(12,7),
+	beta float DEFAULT 0.5,
+	gama float DEFAULT 0.05,
+	time datetime,
 	primary key(id),
 	foreign key(id) references user(id) ON DELETE CASCADE
 )DEFAULT CHARSET=utf8;
@@ -113,8 +116,8 @@ CREATE TABLE event
 	kind int NOT NULL,
 	state int NOT NULL,
 	content blob,
-	video blob,
-	audio blob,
+	video varchar(255) DEFAULT 0,
+	audio varchar(255) DEFAULT 0,
 	latitude DECIMAL(12,7),
 	longitude DECIMAL(12,7),
 	starttime datetime,

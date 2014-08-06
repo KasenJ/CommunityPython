@@ -43,7 +43,9 @@ class GetUserInfoHandler(tornado.web.RequestHandler):
 			print "username not exist"
 			return
 		result = self.application.dbapi.getUsermessegeByUserId(user['id'])
+		result['credit'] = 5 * result['credit']
 		scorelimit = self.application.score.getRankByScore(result['score'])
+		
 		result['scoreMin'] = scorelimit['scoreMin']
 		result['scoreMax'] = scorelimit['scoreMax']
 		result['scoreLevel'] = scorelimit['scoreLevel']

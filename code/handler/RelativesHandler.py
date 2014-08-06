@@ -42,8 +42,8 @@ class CheckrelativesHandler(tornado.web.RequestHandler):
 		self.write("<p>CheckrelativesHandler</p><form action='/api/checkrelatives' method='post'><input type='submit' value='submit'></form>")
 
 	def post(self):
-		#content =self.request.body
-		content = '{"username":"test1"}'
+		content =self.request.body
+		#content = '{"username":"test1"}'
 		j = json.loads(content)
 		userid=self.application.dbapi.getUserByUserName(j['username'])["id"]
 		re=self.application.dbapi.CheckRelationbyId(userid)
@@ -52,11 +52,10 @@ class CheckrelativesHandler(tornado.web.RequestHandler):
 			for row in re:
 				info=self.application.dbapi.getUsermessegeByUserId(row["cid"])
 				info['kind'] = row['kind']
-				#info['avatar'] = self.application.util.getAvatarbyUid(info['id'])
+				info['avatar'] = self.application.util.getAvatarbyUid(info['id'])
 				#relatives.append('{"info":'+str(info)+',"avatar":'+self.application.util.getAvatarbyUid(info['id'])+'}')
 				relatives.append(info)
-			data={'state':1,'ralatives':relatives}
-			print data
+			data={'state':1,'relatives':relatives}
 		else:
 			data={'state':1,'relatives':'[]'}
 		self.write(json_encode(data))
@@ -85,7 +84,8 @@ class DeleterelativesHandler(tornado.web.RequestHandler):
 
 class AgreerelativesHandler(tornado.web.RequestHandler):
 	def get(self):
-		self.write("<p>AgreerelativesHandler</p><form action='/api/agreerelatives' method='post'><input type='submit' value='submit'></form>") 
+		self.write("<p>AgreerelativesHandler</p><form action='/api/agreerelatives' method='post'><input type='submit' value='submit'></form>")
+
 	def post(self):
 		content =self.request.body
 		#content = '{"u_name":"ooo","c_name":"11oo","kind": ,"agree":1(1同意，0不同意)}'

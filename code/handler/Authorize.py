@@ -68,10 +68,10 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
     codechars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW0123456789"
 
     host = "114.215.133.61:8080"
-    mail_host = "smtp.126.com"
-    mail_user = "bfbrmt"
-    mail_pass = "hdd2011bfbrmt"
-    mail_postfix = "126.com"
+    mail_host = "smtp.163.com"
+    mail_user = "CommunityHelp"
+    mail_pass = "community"
+    mail_postfix = "163.com"
     me = mail_user + "<" + mail_user + "@" + mail_postfix + ">"
     msg_content_template = u"""
     <!DOCTYPE html>
@@ -85,7 +85,7 @@ class RequestEmailAuthHandler(tornado.web.RequestHandler):
             <p>您已经成功发出了邮箱验证请求。</p>
             <p>点击以下链接即可完成邮箱验证。如果无法点击，请手动复制网址到浏览器打开。</p>
             <p><a href='http://%s/api/authemail?username=%s&code=%s'>http://%s/api/authemail?username=%s&code=%s</a></p>
-            <p>请注意，本次验证的有效期为2天。在发送邮件之后的3天内任何时间都可以点击验证。</p>
+            <p>请注意，本次验证的有效期为2天。在发送邮件之后的2天内任何时间都可以点击验证。</p>
             <p>如果超过三天还没有点击该链接，则验证将过期。您需要重新请求邮箱验证。</p>
             <p>每个用户每天可以请求10次邮箱验证。如果超过10次，请第二天再试。</p>
         </body>
